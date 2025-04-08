@@ -1,0 +1,4 @@
+dash
+dash-bootstrap-components
+numpy
+opencv-python-headless
