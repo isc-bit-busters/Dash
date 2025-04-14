@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, callback, Output, Input, State
+from dash import html, dcc, callback, Output, Input, State, ctx
 import dash_bootstrap_components as dbc
 import time
 import threading
@@ -10,7 +10,7 @@ import base64
 
 # For Spade
 from spade.agent import Agent
-from spade.behaviour import CyclicBehaviour
+from spade.behaviour import CyclicBehaviour, OneShotBehaviour
 import asyncio
 import os
 import spade
@@ -57,7 +57,7 @@ def generate_black_image(robot_id):
 
 # Start background threads
 for rid in ['robot1', 'robot2']:
-    threading.Thread(target=generate_logs, args=(rid,), daemon=True).start()
+    # threading.Thread(target=generate_logs, args=(rid,), daemon=True).start()
     threading.Thread(target=generate_black_image, args=(rid,), daemon=True).start()
 
 # ----------------------
@@ -80,7 +80,11 @@ def robot_card(robot_id):
             html.Br(),
             dbc.Row([
                 dbc.Col(dbc.Button("Start", id=f"{robot_id}-start", color="success", className="me-2")),
-                dbc.Col(dbc.Button("Stop", id=f"{robot_id}-stop", color="danger"))
+                dbc.Col(dbc.Button("Stop", id=f"{robot_id}-stop", color="danger")),
+                dbc.Col([
+                    dbc.Button("Penalty", id=f"{robot_id}-penalty", color="warning", n_clicks=0),
+                    html.Div(id=f"{robot_id}-penalty-status", className="mt-2", style={"color": "green", "fontWeight": "bold"})
+                ])
             ])
         ])
     ], className="mb-4")
@@ -91,7 +95,9 @@ app.layout = dbc.Container([
         dbc.Col(robot_card("robot1"), md=6),
         dbc.Col(robot_card("robot2"), md=6)
     ]),
-    dcc.Interval(id='update-interval', interval=1000, n_intervals=0)
+    dcc.Interval(id='update-interval', interval=1000, n_intervals=0),
+    dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
 ], fluid=True)
 
 
@@ -116,15 +122,35 @@ def update_ui(n):
 
     return r1_logs, r2_logs, r1_img, r2_img
 
+def send_message_to_robot(robot_id, message, sender_id="testClient"):
+    def _send():
+        async def run_sender():
+            xmpp_server = "prosody"
+            xmpp_password = os.getenv("XMPP_PASSWORD", "plsnohack")
+
+            sender = SenderAgent(f"{sender_id}@{xmpp_server}", xmpp_password)
+            await sender.start(auto_register=True)
+            sender.add_behaviour(sender.SendBehaviour(robot_id, message))
+            await asyncio.sleep(5)
+            await sender.stop()
+        
+        asyncio.run(run_sender())
+        print(f"[Sender] Message sent: '{message}' to {robot_id}", flush=True)
+
+    threading.Thread(target=_send, daemon=True).start()
+
 # Fix scoping with wrapper
 def make_toggle_callback(robot_id):
     def toggle(start_clicks, stop_clicks, is_start_disabled):
         triggered_id = dash.ctx.triggered_id
         if triggered_id and triggered_id.endswith('start'):
             robot_states[robot_id] = True
+            # Send message to robot
+            send_message_to_robot(robot_id, "start", "dashboardClient")
             return True, False
         elif triggered_id and triggered_id.endswith('stop'):
             robot_states[robot_id] = False
+            send_message_to_robot(robot_id, "stop", "dashboardClient")
             return False, True
         return dash.no_update, dash.no_update
     return toggle
@@ -140,8 +166,26 @@ for robot_id in ['robot1', 'robot2']:
         prevent_initial_call=True
     )(make_toggle_callback(robot_id))
 
+for robot_id in ['robot1', 'robot2']:
+    @app.callback(
+        Output(f"{robot_id}-penalty", "disabled"),
+        Output(f"{robot_id}-penalty-status", "children"),
+        Output(f"{robot_id}-penalty-cooldown", "n_intervals"),
+        Input(f"{robot_id}-penalty", "n_clicks"),
+        Input(f"{robot_id}-penalty-cooldown", "n_intervals"),
+        prevent_initial_call=True
+    )
+    def handle_penalty(penalty_clicks, cooldown_interval, _robot_id=robot_id):
+        triggered = ctx.triggered_id
+        if triggered == f"{_robot_id}-penalty":
+            send_message_to_robot(_robot_id, "penalty", "dashboardClient")
+            return True, "Penalty sent!", 0  # Disable button, show message, start cooldown
+        elif triggered == f"{_robot_id}-penalty-cooldown":
+            return False, "", dash.no_update  # Re-enable, clear message
+        return dash.no_update, dash.no_update, dash.no_update
+
 # ----------------------
-# Agent
+# Agents
 # ----------------------
 class ReceiverAgent(Agent):
     class ReceiveMessageBehaviour(CyclicBehaviour):
@@ -165,10 +209,22 @@ class ReceiverAgent(Agent):
     async def setup(self):
         print("ReceiverAgent started setup", flush=True)
         b = self.ReceiveMessageBehaviour()
-        # template = Template()
-        # template.set_metadata("performative", "inform")
-        # self.add_behaviour(b, template)
         self.add_behaviour(b)
+
+class SenderAgent(Agent):
+    class SendBehaviour(OneShotBehaviour):
+        def __init__(self, robot_id, message):
+            super().__init__()
+            self.robot_id = robot_id
+            self.message = message
+        async def run(self):
+            msg = spade.message.Message(
+                to="receiverClient@prosody",
+                body=self.message
+            )
+            msg.set_metadata("robot_id", self.robot_id)
+            print(f"Sending message: {msg.body}", flush=True)
+            await self.send(msg)
 
 def start_agent():
     async def agent_task():
