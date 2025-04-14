@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "8050:8050"
+    environment:
+      - XMPP_JID=client@prosody
+      - XMPP_PASSWORD=plsnohack 
+      - ROBOT_RECIPIENT=alpha-pi-zero-agent@prosody
+      - ROBOT_INSTRUCTIONS=forward,backward,left,right,stop
+    extra_hosts:
+      - "prosody:192.168.88.253"

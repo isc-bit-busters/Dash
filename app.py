@@ -8,6 +8,13 @@ import numpy as np
 import cv2
 import base64
 
+# For Spade
+from spade.agent import Agent
+from spade.behaviour import CyclicBehaviour
+import asyncio
+import os
+import spade
+
 # ----------------------
 # Globals
 # ----------------------
@@ -25,6 +32,10 @@ latest_frames = {
     'robot1': None,
     'robot2': None
 }
+
+def add_log(robot_id, message):
+    if robot_id in robot_logs:
+        robot_logs[robot_id].appendleft(message)
 
 # ----------------------
 # Simulated Data Threads
@@ -130,7 +141,50 @@ for robot_id in ['robot1', 'robot2']:
     )(make_toggle_callback(robot_id))
 
 # ----------------------
+# Agent
+# ----------------------
+class ReceiverAgent(Agent):
+    class ReceiveMessageBehaviour(CyclicBehaviour):
+
+        async def run(self):
+            timeout = 10
+            print("Waiting for message...", flush=True)
+            msg = await self.receive(timeout=timeout)  # wait for a message for 10 seconds
+            if msg:
+                robot_id = msg.metadata.get("robot_id", "unknown")
+                log_entry = f"From {msg.sender}: {msg.body}"
+                print(f"Log added : {log_entry}", flush=True)
+                add_log(robot_id, log_entry)
+            else:
+                print(f"Did not received any message after {timeout} seconds")
+                # self.kill()
+
+        async def on_end(self):
+            await self.agent.stop()
+
+    async def setup(self):
+        print("ReceiverAgent started setup", flush=True)
+        b = self.ReceiveMessageBehaviour()
+        # template = Template()
+        # template.set_metadata("performative", "inform")
+        # self.add_behaviour(b, template)
+        self.add_behaviour(b)
+
+def start_agent():
+    async def agent_task():
+        xmpp_username = "receiverClient"
+        xmpp_server = "prosody"
+        xmpp_password = os.getenv("XMPP_PASSWORD", "plsnohack")
+
+        receiver = ReceiverAgent(f"{xmpp_username}@{xmpp_server}", xmpp_password)
+        await receiver.start(auto_register=True)
+        await spade.wait_until_finished(receiver)
+
+    asyncio.run(agent_task())
+
+# ----------------------
 # Run App
 # ----------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    threading.Thread(target=start_agent, daemon=True).start()
+    app.run(host="0.0.0.0", port=8050, debug=True)
