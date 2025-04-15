@@ -58,7 +58,8 @@ def generate_black_image(robot_id):
 # Start background threads
 for rid in ['robot1', 'robot2']:
     # threading.Thread(target=generate_logs, args=(rid,), daemon=True).start()
-    threading.Thread(target=generate_black_image, args=(rid,), daemon=True).start()
+    # threading.Thread(target=generate_black_image, args=(rid,), daemon=True).start()
+    pass
 
 # ----------------------
 # Dash Setup
@@ -196,9 +197,19 @@ class ReceiverAgent(Agent):
             msg = await self.receive(timeout=timeout)  # wait for a message for 10 seconds
             if msg:
                 robot_id = msg.metadata.get("robot_id", "unknown")
-                log_entry = f"From {msg.sender}: {msg.body}"
-                print(f"Log added : {log_entry}", flush=True)
-                add_log(robot_id, log_entry)
+                type_msg = msg.metadata.get("type", "unknown")
+                if type_msg == "image":
+                    print(f"Received image from {robot_id}", flush=True)
+                    latest_frames[robot_id] = msg.body
+                    log_entry = f"Image received from {robot_id}"
+                    add_log(robot_id, log_entry)
+                elif type_msg == "log":
+                    log_entry = f"From {msg.sender}: {msg.body}"
+                    print(f"Log added : {log_entry}", flush=True)
+                    add_log(robot_id, log_entry)
+                else:
+                    print(f"Unknown message type: {type_msg}", flush=True)
+                    add_log(robot_id, f"Unknown message type: {type_msg}")
             else:
                 print(f"Did not received any message after {timeout} seconds")
                 # self.kill()
@@ -223,6 +234,7 @@ class SenderAgent(Agent):
                 body=self.message
             )
             msg.set_metadata("robot_id", self.robot_id)
+            msg.set_metadata("type", "log")
             print(f"Sending message: {msg.body}", flush=True)
             await self.send(msg)
 
