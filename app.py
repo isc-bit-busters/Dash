@@ -104,6 +104,11 @@ app.layout = dbc.Container([
     html.Hr(),
     html.H5("MQTT Logs"),
     html.Ul(id="mqtt-log-display", className="log-list"),
+    html.Hr(),
+    html.Div([
+        dbc.Button("Reset MQTT", id="send-mqtt-btn", color="primary", className="mb-3"),
+        html.Div(id="mqtt-command-status", style={"fontWeight": "bold", "color": "blue"})
+    ]),
     dcc.Interval(id='update-interval', interval=1000, n_intervals=0),
     dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
@@ -195,6 +200,17 @@ for robot_id in ['robot1', 'robot2']:
             return False, "", dash.no_update  # Re-enable, clear message
         return dash.no_update, dash.no_update, dash.no_update
 
+
+@app.callback(
+    Output("mqtt-command-status", "children"),
+    Input("send-mqtt-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def send_mqtt_command_callback(n_clicks):
+    topic = "gates"
+    command = "reset"
+    send_mqtt_command(topic, command)
+    return f"Command '{command}' sent to topic '{topic}'"
 # ----------------------
 # Agents
 # ----------------------
@@ -295,8 +311,7 @@ def start_mqtt_client():
 mqtt_pub_client = mqtt.Client()
 mqtt_pub_client.connect(MQTT_BROKER, MQTT_PORT)
 
-def send_mqtt_command(robot_id, command):
-    topic = f"{robot_id}/command"
+def send_mqtt_command(topic, command):
     mqtt_pub_client.publish(topic, command)
     print(f"Published to {topic}: {command}")
 
