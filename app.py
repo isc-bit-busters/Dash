@@ -15,6 +15,9 @@ import asyncio
 import os
 import spade
 
+# For MQTT
+import paho.mqtt.client as mqtt
+
 # ----------------------
 # Globals
 # ----------------------
@@ -22,6 +25,8 @@ robot_logs = {
     'robot1': deque(maxlen=10),
     'robot2': deque(maxlen=10)
 }
+
+mqtt_logs = deque(maxlen=20)
 
 robot_states = {
     'robot1': False,
@@ -96,6 +101,9 @@ app.layout = dbc.Container([
         dbc.Col(robot_card("robot1"), md=6),
         dbc.Col(robot_card("robot2"), md=6)
     ]),
+    html.Hr(),
+    html.H5("MQTT Logs"),
+    html.Ul(id="mqtt-log-display", className="log-list"),
     dcc.Interval(id='update-interval', interval=1000, n_intervals=0),
     dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
@@ -112,16 +120,18 @@ app.layout = dbc.Container([
     Output('robot2-logs', 'children'),
     Output('robot1-image', 'src'),
     Output('robot2-image', 'src'),
+    Output('mqtt-log-display', 'children'),
     Input('update-interval', 'n_intervals')
 )
 def update_ui(n):
     r1_logs = [html.Li(log) for log in list(robot_logs['robot1'])]
     r2_logs = [html.Li(log) for log in list(robot_logs['robot2'])]
+    mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
     r1_img = f"data:image/jpeg;base64,{latest_frames['robot1']}" if latest_frames['robot1'] else ""
     r2_img = f"data:image/jpeg;base64,{latest_frames['robot2']}" if latest_frames['robot2'] else ""
 
-    return r1_logs, r2_logs, r1_img, r2_img
+    return r1_logs, r2_logs, r1_img, r2_img, mqtt_display_logs
 
 def send_message_to_robot(robot_id, message, sender_id="testClient"):
     def _send():
@@ -251,8 +261,50 @@ def start_agent():
     asyncio.run(agent_task())
 
 # ----------------------
+# MQTT Client
+# ----------------------
+MQTT_BROKER = "192.168.1.30"  # Change to your broker IP
+MQTT_PORT = 1883
+MQTT_TOPICS = [("gates", 0)]
+
+
+def on_connect(client, userdata, flags, rc):
+    print(f"Connected to MQTT broker with result code {rc}", flush=True)
+    for topic, qos in MQTT_TOPICS:
+        client.subscribe(topic)
+        print(f"Subscribed to {topic}", flush=True)
+
+def on_message(client, userdata, msg):
+    topic = msg.topic
+    payload = msg.payload.decode()
+
+    log_entry = f"[MQTT:{topic}] {payload}"
+    mqtt_logs.appendleft(log_entry)
+    print(log_entry, flush=True)
+
+def start_mqtt_client():
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_forever()
+
+#  ----
+
+mqtt_pub_client = mqtt.Client()
+mqtt_pub_client.connect(MQTT_BROKER, MQTT_PORT)
+
+def send_mqtt_command(robot_id, command):
+    topic = f"{robot_id}/command"
+    mqtt_pub_client.publish(topic, command)
+    print(f"Published to {topic}: {command}")
+
+
+# ----------------------
 # Run App
 # ----------------------
 if __name__ == "__main__":
     threading.Thread(target=start_agent, daemon=True).start()
+    threading.Thread(target=start_mqtt_client, daemon=True).start()
     app.run(host="0.0.0.0", port=8050, debug=True)

@@ -4,3 +4,4 @@ numpy
 opencv-python-headless
 spade==3.3.3
 aiofiles==23.2.1
+paho-mqtt
