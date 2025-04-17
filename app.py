@@ -21,7 +21,7 @@ import paho.mqtt.client as mqtt
 # Globals
 # ----------------------
 
-MQTT_BROKER = "192.168.1.30"
+MQTT_BROKER = "192.168.88.253"
 MQTT_PORT = 1883
 MQTT_TOPICS = [
     ("gate/ir", 0),
