@@ -207,7 +207,7 @@ for robot_id in ['robot1', 'robot2']:
     prevent_initial_call=True
 )
 def send_mqtt_command_callback(n_clicks):
-    topic = "gates"
+    topic = "gate/ir"
     command = "reset"
     send_mqtt_command(topic, command)
     return f"Command '{command}' sent to topic '{topic}'"
@@ -279,9 +279,9 @@ def start_agent():
 # ----------------------
 # MQTT Client
 # ----------------------
-MQTT_BROKER = "192.168.1.30"  # Change to your broker IP
+MQTT_BROKER = "192.168.88.253"  # Change to your broker IP
 MQTT_PORT = 1883
-MQTT_TOPICS = [("gates", 0)]
+MQTT_TOPICS = [("gate/ir", 0), ("gate1/ir", 0), ("gate2/ir", 0)]
 
 
 def on_connect(client, userdata, flags, rc):
