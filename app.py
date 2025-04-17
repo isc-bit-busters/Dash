@@ -5,8 +5,7 @@ import time
 import threading
 from collections import deque
 import numpy as np
-import cv2
-import base64
+from datetime import datetime
 
 # For Spade
 from spade.agent import Agent
@@ -21,6 +20,20 @@ import paho.mqtt.client as mqtt
 # ----------------------
 # Globals
 # ----------------------
+
+MQTT_BROKER = "192.168.1.30"
+MQTT_PORT = 1883
+MQTT_TOPICS = [
+    ("gate/ir", 0),
+    ("gate1/ir", 0),
+    ("gate2/ir", 0),
+
+    ("gate/start1", 0),
+    ("gate/start2", 0),
+    ("gate/finish1", 0),
+    ("gate/finish2", 0),
+]
+
 robot_logs = {
     'robot1': deque(maxlen=10),
     'robot2': deque(maxlen=10)
@@ -38,33 +51,32 @@ latest_frames = {
     'robot2': None
 }
 
+race_state = {
+    "start_time": None,
+    "finish_times": {},
+    "running": False,
+    "elapsed": 0.0,
+    "delta": None
+}
+
+# -----------------
+# Utility Functions
+# -----------------
+
 def add_log(robot_id, message):
     if robot_id in robot_logs:
         robot_logs[robot_id].appendleft(message)
 
-# ----------------------
-# Simulated Data Threads
-# ----------------------
-def generate_logs(robot_id):
-    while True:
-        if robot_states[robot_id]:
-            robot_logs[robot_id].appendleft(f"{robot_id} log at {time.strftime('%H:%M:%S')}")
-        time.sleep(2)
+def add_mqtt_log(msg):
+    mqtt_logs.appendleft(msg)
 
-def generate_black_image(robot_id):
-    while True:
-        # Create black image
-        frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        _, buffer = cv2.imencode('.jpg', frame)
-        img_base64 = base64.b64encode(buffer).decode()
-        latest_frames[robot_id] = img_base64
-        time.sleep(0.05)
+def parse_timestamp(ts_str):
+    try:
+        return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+    except Exception:
+        return datetime.utcnow()
+    
 
-# Start background threads
-for rid in ['robot1', 'robot2']:
-    # threading.Thread(target=generate_logs, args=(rid,), daemon=True).start()
-    # threading.Thread(target=generate_black_image, args=(rid,), daemon=True).start()
-    pass
 
 # ----------------------
 # Dash Setup
@@ -102,14 +114,31 @@ app.layout = dbc.Container([
         dbc.Col(robot_card("robot2"), md=6)
     ]),
     html.Hr(),
-    html.H5("MQTT Logs"),
-    html.Ul(id="mqtt-log-display", className="log-list"),
-    html.Hr(),
-    html.Div([
-        dbc.Button("Reset MQTT", id="send-mqtt-btn", color="primary", className="mb-3"),
-        html.Div(id="mqtt-command-status", style={"fontWeight": "bold", "color": "blue"})
+    html.H5("Race Timing Monitor", className="my-4 text-center"),
+    dbc.Row([
+        dbc.Col(dbc.Card([
+            dbc.CardHeader("⏱ Current Race Time"),
+            dbc.CardBody(html.H4(id="live-timer", children="0.000 s", className="text-primary"))
+        ]), md=6),
+        dbc.Col(dbc.Card([
+            dbc.CardHeader("Δ Time Between Finishes"),
+            dbc.CardBody(html.H4(id="delta-timer", children="N/A", className="text-warning"))
+        ]), md=6),
     ]),
-    dcc.Interval(id='update-interval', interval=1000, n_intervals=0),
+    html.Div([
+        dbc.Button("Reset Race", id="reset-race", color="danger", className="mt-3"),
+        html.Div(id="reset-status", className="mt-2", style={"fontWeight": "bold", "color": "red"})
+    ]),
+    html.Hr(),
+    dbc.Card([
+        dbc.CardHeader("Latest Race Logs"),
+        dbc.CardBody([
+            html.Ul(id="mqtt-log-display", className="log-list", style={"maxHeight": "300px", "overflowY": "scroll"})
+        ])
+    ]),
+    html.Div(id="mqtt-command-status"),  # Added missing component
+    dbc.Button("Send MQTT Reset", id="send-mqtt-btn", color="secondary", className="mt-3"),
+    dcc.Interval(id='update-interval', interval=10, n_intervals=0),
     dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
 ], fluid=True)
@@ -126,9 +155,25 @@ app.layout = dbc.Container([
     Output('robot1-image', 'src'),
     Output('robot2-image', 'src'),
     Output('mqtt-log-display', 'children'),
-    Input('update-interval', 'n_intervals')
+    Output("live-timer", "children"),
+    Output("delta-timer", "children"),
+    Input('update-interval', 'n_intervals'),
+    State('live-timer', 'children'),
 )
-def update_ui(n):
+def update_ui(n, current_timer):
+    now = datetime.now()
+    if race_state["running"] and race_state["start_time"]:
+        race_state["elapsed"] = (now - race_state["start_time"]).total_seconds()
+
+    finish_times = list(race_state["finish_times"].values())
+    if race_state["running"] and len(finish_times) == 1:
+        delta = abs((now - finish_times[0]).total_seconds())
+        delta_display = f"{delta:.3f} s"
+    else:
+        delta_display = f"{race_state['delta']:.3f} s" if race_state['delta'] is not None else "N/A"
+
+    timer_display = f"{race_state['elapsed']:.3f} s"
+
     r1_logs = [html.Li(log) for log in list(robot_logs['robot1'])]
     r2_logs = [html.Li(log) for log in list(robot_logs['robot2'])]
     mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
@@ -136,7 +181,21 @@ def update_ui(n):
     r1_img = f"data:image/jpeg;base64,{latest_frames['robot1']}" if latest_frames['robot1'] else ""
     r2_img = f"data:image/jpeg;base64,{latest_frames['robot2']}" if latest_frames['robot2'] else ""
 
-    return r1_logs, r2_logs, r1_img, r2_img, mqtt_display_logs
+    return r1_logs, r2_logs, r1_img, r2_img, mqtt_display_logs, timer_display, delta_display
+
+@app.callback(
+    Output("reset-status", "children"),
+    Input("reset-race", "n_clicks"),
+    prevent_initial_call=True
+)
+def reset_race(n_clicks):
+    race_state["start_time"] = None
+    race_state["finish_times"] = {}
+    race_state["running"] = False
+    race_state["elapsed"] = 0.0
+    race_state["delta"] = None
+    add_mqtt_log("[RACE 🔄] Race has been reset via dashboard")
+    return "Race has been reset."
 
 def send_message_to_robot(robot_id, message, sender_id="testClient"):
     def _send():
@@ -211,6 +270,34 @@ def send_mqtt_command_callback(n_clicks):
     command = "reset"
     send_mqtt_command(topic, command)
     return f"Command '{command}' sent to topic '{topic}'"
+
+def handle_gate_event(topic, payload):
+    global race_state
+
+    timestamp = parse_timestamp(payload)
+
+    print(f"{timestamp} received from payload {payload}", flush=True)
+
+    if "start" in topic:
+        if not race_state["start_time"]:
+            race_state["start_time"] = timestamp
+            race_state["running"] = True
+            race_state["delta"] = None
+            add_mqtt_log(f"[RACE] Start triggered at {timestamp.time()}")
+
+    elif "finish" in topic:
+        race_state["finish_times"][topic] = timestamp
+        add_mqtt_log(f"[RACE] Finish {topic} at {timestamp.time()}")
+
+        if len(race_state["finish_times"]) >= 2:
+            finish_times = list(race_state["finish_times"].values())
+            first_finish = min(finish_times)
+            last_finish = max(finish_times)
+            race_state["delta"] = abs((finish_times[0] - finish_times[1]).total_seconds())
+            race_state["elapsed"] = (last_finish - race_state["start_time"]).total_seconds()
+            race_state["running"] = False
+
+            add_mqtt_log(f"[RACE ✅] Total time: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s")
 # ----------------------
 # Agents
 # ----------------------
@@ -279,11 +366,6 @@ def start_agent():
 # ----------------------
 # MQTT Client
 # ----------------------
-MQTT_BROKER = "192.168.88.253"  # Change to your broker IP
-MQTT_PORT = 1883
-MQTT_TOPICS = [("gate/ir", 0), ("gate1/ir", 0), ("gate2/ir", 0)]
-
-
 def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker with result code {rc}", flush=True)
     for topic, qos in MQTT_TOPICS:
@@ -295,8 +377,11 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode()
 
     log_entry = f"[MQTT:{topic}] {payload}"
-    mqtt_logs.appendleft(log_entry)
+    add_mqtt_log(log_entry)
     print(log_entry, flush=True)
+
+    if "start" in topic or "finish" in topic:
+        handle_gate_event(topic, payload)
 
 def start_mqtt_client():
     client = mqtt.Client()
