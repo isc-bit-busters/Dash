@@ -28,10 +28,10 @@ MQTT_TOPICS = [
     ("gate1/ir", 0),
     ("gate2/ir", 0),
 
-    ("gate/start1", 0),
-    ("gate/start2", 0),
-    ("gate/finish1", 0),
-    ("gate/finish2", 0),
+    ("gate1/start", 0),
+    ("gate2/start", 0),
+    ("gate1/finish", 0),
+    ("gate2/finish", 0),
 ]
 
 robot_logs = {
