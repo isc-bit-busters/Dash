@@ -163,7 +163,32 @@ def create_gates_settings():
         ], title="Gates Settings")
     ], start_collapsed=True, always_open=True)
 
+def mqtt_log_card():
+    return dbc.Card([
+        dbc.CardHeader("Latest Race Logs"),
+        dbc.CardBody([
+            html.Ul(id="mqtt-log-display", className="log-list", style={"maxHeight": "300px", "overflowY": "scroll"})
+        ])
+    ])
 
+def race_timer():
+    return [
+        html.H5("Race Timing Monitor", className="my-4 text-center"),
+        dbc.Row([
+            dbc.Col(dbc.Card([
+                dbc.CardHeader("⏱ Current Race Time"),
+                dbc.CardBody(html.H4(id="live-timer", children="0.000 s", className="text-primary"))
+            ]), md=6),
+            dbc.Col(dbc.Card([
+                dbc.CardHeader("Δ Time Between Finishes"),
+                dbc.CardBody(html.H4(id="delta-timer", children="N/A", className="text-warning"))
+            ]), md=6),
+        ]),
+        html.Div([
+            dbc.Button("Reset Race", id="reset-race", color="danger", className="mt-3"),
+            html.Div(id="reset-status", className="mt-2", style={"fontWeight": "bold", "color": "red"})
+        ]),
+    ]
 
 app.layout = dbc.Container([
     html.H1("Robot Control Dashboard", className="my-4 text-center"),
@@ -172,28 +197,9 @@ app.layout = dbc.Container([
         dbc.Col(robot_card("robot2"), md=6)
     ]),
     html.Hr(),
-    html.H5("Race Timing Monitor", className="my-4 text-center"),
-    dbc.Row([
-        dbc.Col(dbc.Card([
-            dbc.CardHeader("⏱ Current Race Time"),
-            dbc.CardBody(html.H4(id="live-timer", children="0.000 s", className="text-primary"))
-        ]), md=6),
-        dbc.Col(dbc.Card([
-            dbc.CardHeader("Δ Time Between Finishes"),
-            dbc.CardBody(html.H4(id="delta-timer", children="N/A", className="text-warning"))
-        ]), md=6),
-    ]),
-    html.Div([
-        dbc.Button("Reset Race", id="reset-race", color="danger", className="mt-3"),
-        html.Div(id="reset-status", className="mt-2", style={"fontWeight": "bold", "color": "red"})
-    ]),
+    *race_timer(),
     html.Hr(),
-    dbc.Card([
-        dbc.CardHeader("Latest Race Logs"),
-        dbc.CardBody([
-            html.Ul(id="mqtt-log-display", className="log-list", style={"maxHeight": "300px", "overflowY": "scroll"})
-        ])
-    ]),
+    mqtt_log_card(),
     html.Hr(),
     create_gates_settings(),
     
@@ -498,12 +504,15 @@ def on_message(client, userdata, msg):
         handle_gate_event(topic, payload)
 
 def start_mqtt_client():
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
+    try:
+        client = mqtt.Client()
+        client.on_connect = on_connect
+        client.on_message = on_message
 
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_forever()
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        client.loop_forever()
+    except Exception as e:
+        print(f"⚠️ Could not start MQTT client: {e}", flush=True)
 
 #  ----
 
@@ -521,8 +530,12 @@ def init_mqtt_pub_client():
 
 
 def send_mqtt_command(topic, command):
-    mqtt_pub_client.publish(topic, command)
-    print(f"Published to {topic}: {command}", flush=True)
+    if mqtt_pub_client:
+        mqtt_pub_client.publish(topic, command)
+        print(f"Published to {topic}: {command}", flush=True)
+    else:
+        print(f"⚠️ MQTT publish client not available, could not send '{command}' to '{topic}'", flush=True)
+
 
 # ----------------------
 # Run App
