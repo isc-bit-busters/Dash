@@ -107,6 +107,44 @@ def robot_card(robot_id):
         ])
     ], className="mb-4")
 
+def create_gates_settings():
+    return dbc.Accordion([
+        dbc.AccordionItem([
+            dbc.Form([
+                html.H5("Gate 1 Settings"),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("Start Gate MAC"),
+                        dbc.Input(id="gate1-start-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                    ]),
+                    dbc.Col([
+                        dbc.Label("Finish Gate MAC"),
+                        dbc.Input(id="gate1-finish-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                    ])
+                ]),
+                dbc.Button("Send Gate 1 MACs", id="send-gate1-macs", color="primary", className="mt-3"),
+                html.Div(id="gate1-mac-status", className="mt-2", style={"fontWeight": "bold"}),
+                html.Hr(),
+
+                html.H5("Gate 2 Settings"),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label("Start Gate MAC"),
+                        dbc.Input(id="gate2-start-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                    ]),
+                    dbc.Col([
+                        dbc.Label("Finish Gate MAC"),
+                        dbc.Input(id="gate2-finish-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                    ])
+                ]),
+                dbc.Button("Send Gate 2 MACs", id="send-gate2-macs", color="primary", className="mt-3"),
+                html.Div(id="gate2-mac-status", className="mt-2", style={"fontWeight": "bold"})
+            ])
+        ], title="Gates Settings")
+    ], start_collapsed=True, always_open=True)
+
+
+
 app.layout = dbc.Container([
     html.H1("Robot Control Dashboard", className="my-4 text-center"),
     dbc.Row([
@@ -136,7 +174,10 @@ app.layout = dbc.Container([
             html.Ul(id="mqtt-log-display", className="log-list", style={"maxHeight": "300px", "overflowY": "scroll"})
         ])
     ]),
-    html.Div(id="mqtt-command-status"),  # Added missing component
+    html.Hr(),
+    create_gates_settings(),
+    
+    html.Div(id="mqtt-command-status"),
     dbc.Button("Send MQTT Reset", id="send-mqtt-btn", color="secondary", className="mt-3"),
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),
     dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
@@ -303,6 +344,41 @@ def handle_gate_event(topic, payload):
                 add_mqtt_log(f"[RACE ✅] Total time: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s")
         else:
             add_mqtt_log(f"[RACE] Finish gate {topic} already triggered")
+
+@app.callback(
+    Output("gate1-mac-status", "children"),
+    Output("gate2-mac-status", "children"),
+    Input("send-gate1-macs", "n_clicks"),
+    Input("send-gate2-macs", "n_clicks"),
+    State("gate1-start-mac", "value"),
+    State("gate1-finish-mac", "value"),
+    State("gate2-start-mac", "value"),
+    State("gate2-finish-mac", "value"),
+    prevent_initial_call=True,
+)
+def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_start, gate1_finish, gate2_start, gate2_finish):
+    triggered = ctx.triggered_id
+
+    gate1_status = dash.no_update
+    gate2_status = dash.no_update
+
+    if triggered == "send-gate1-macs":
+        if gate1_start and gate1_finish:
+            payload = {"start_mac": gate1_start, "finish_mac": gate1_finish}
+            send_mqtt_command("gate1/mac_config", str(payload))
+            gate1_status = f"✅ Gate 1 MAC addresses sent: {payload}"
+        else:
+            gate1_status = "⚠️ Please fill both Start and Finish MAC for Gate 1."
+
+    if triggered == "send-gate2-macs":
+        if gate2_start and gate2_finish:
+            payload = {"start_mac": gate2_start, "finish_mac": gate2_finish}
+            send_mqtt_command("gate2/mac_config", str(payload))
+            gate2_status = f"✅ Gate 2 MAC addresses sent: {payload}"
+        else:
+            gate2_status = "⚠️ Please fill both Start and Finish MAC for Gate 2."
+
+    return gate1_status, gate2_status
 # ----------------------
 # Agents
 # ----------------------
@@ -403,8 +479,7 @@ mqtt_pub_client.connect(MQTT_BROKER, MQTT_PORT)
 
 def send_mqtt_command(topic, command):
     mqtt_pub_client.publish(topic, command)
-    print(f"Published to {topic}: {command}")
-
+    print(f"Published to {topic}: {command}", flush=True)
 
 # ----------------------
 # Run App
