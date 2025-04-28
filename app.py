@@ -138,7 +138,7 @@ app.layout = dbc.Container([
     ]),
     html.Div(id="mqtt-command-status"),  # Added missing component
     dbc.Button("Send MQTT Reset", id="send-mqtt-btn", color="secondary", className="mt-3"),
-    dcc.Interval(id='update-interval', interval=10, n_intervals=0),
+    dcc.Interval(id='update-interval', interval=100, n_intervals=0),
     dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
 ], fluid=True)
@@ -279,25 +279,30 @@ def handle_gate_event(topic, payload):
     print(f"{timestamp} received from payload {payload}", flush=True)
 
     if "start" in topic:
-        if not race_state["start_time"]:
+        if not race_state["running"]:
             race_state["start_time"] = timestamp
             race_state["running"] = True
             race_state["delta"] = None
             add_mqtt_log(f"[RACE] Start triggered at {timestamp.time()}")
+        else:
+            add_mqtt_log(f"[RACE] Start gate already triggered")
 
     elif "finish" in topic:
-        race_state["finish_times"][topic] = timestamp
-        add_mqtt_log(f"[RACE] Finish {topic} at {timestamp.time()}")
+        if topic not in race_state["finish_times"] and race_state["running"]:
+            race_state["finish_times"][topic] = timestamp
+            add_mqtt_log(f"[RACE] Finish {topic} at {timestamp.time()}")
 
-        if len(race_state["finish_times"]) >= 2:
-            finish_times = list(race_state["finish_times"].values())
-            first_finish = min(finish_times)
-            last_finish = max(finish_times)
-            race_state["delta"] = abs((finish_times[0] - finish_times[1]).total_seconds())
-            race_state["elapsed"] = (last_finish - race_state["start_time"]).total_seconds()
-            race_state["running"] = False
+            if len(race_state["finish_times"]) >= 2:
+                finish_times = list(race_state["finish_times"].values())
+                first_finish = min(finish_times)
+                last_finish = max(finish_times)
+                race_state["delta"] = abs((finish_times[0] - finish_times[1]).total_seconds())
+                race_state["elapsed"] = (last_finish - race_state["start_time"]).total_seconds()
+                race_state["running"] = False
 
-            add_mqtt_log(f"[RACE ✅] Total time: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s")
+                add_mqtt_log(f"[RACE ✅] Total time: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s")
+        else:
+            add_mqtt_log(f"[RACE] Finish gate {topic} already triggered")
 # ----------------------
 # Agents
 # ----------------------
