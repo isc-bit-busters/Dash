@@ -51,7 +51,8 @@ robot_states = {
 
 latest_frames = {
     'robot1': None,
-    'robot2': None
+    'robot2': None,
+    'top_camera' : None
 }
 
 race_state = {
@@ -190,8 +191,26 @@ def race_timer():
         ]),
     ]
 
+def top_camera_layout():
+    return [
+        html.H5("Top Camera View", className="my-4 text-center"),
+        dbc.Row([
+            dbc.Col(html.Img(id="top-camera-image", style={"width": "100%", "maxHeight": "600px"})),
+        ], className="mb-4"),
+        dbc.Row([
+            dbc.Col(dbc.Button("Capture New Image", id="capture-top-image-btn", color="primary")),
+        ], className="text-center"),
+        dbc.Row([
+            html.Div(id="capture-status", className="mt-2", style={"fontWeight": "bold", "color": "green"})
+        ]),
+    ]
+
+
 app.layout = dbc.Container([
     html.H1("Robot Control Dashboard", className="my-4 text-center"),
+
+    *top_camera_layout(),
+
     dbc.Row([
         dbc.Col(robot_card("robot1"), md=6),
         dbc.Col(robot_card("robot2"), md=6)
@@ -221,6 +240,7 @@ app.layout = dbc.Container([
     Output('robot2-logs', 'children'),
     Output('robot1-image', 'src'),
     Output('robot2-image', 'src'),
+    Output("top-camera-image", "src"),
     Output('mqtt-log-display', 'children'),
     Output("live-timer", "children"),
     Output("delta-timer", "children"),
@@ -247,8 +267,9 @@ def update_ui(n, current_timer):
 
     r1_img = f"data:image/jpeg;base64,{latest_frames['robot1']}" if latest_frames['robot1'] else ""
     r2_img = f"data:image/jpeg;base64,{latest_frames['robot2']}" if latest_frames['robot2'] else ""
+    top_camera_img = f"data:image/jpeg;base64,{latest_frames['top_camera']}" if latest_frames['top_camera'] else ""
 
-    return r1_logs, r2_logs, r1_img, r2_img, mqtt_display_logs, timer_display, delta_display
+    return r1_logs, r2_logs, r1_img, r2_img, top_camera_img, mqtt_display_logs, timer_display, delta_display
 
 @app.callback(
     Output("reset-status", "children"),
@@ -326,6 +347,16 @@ for robot_id in ['robot1', 'robot2']:
             return False, "", dash.no_update  # Re-enable, clear message
         return dash.no_update, dash.no_update, dash.no_update
 
+@callback(
+    Output("capture-status", "children"),
+    Input("capture-top-image-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def capture_new_top_image(n_clicks):
+    if n_clicks:
+        send_message_to_robot("top_camera", "take_picture", "dashboardClient")
+        return "📸 Capture request sent!", False
+    return dash.no_update
 
 @app.callback(
     Output("mqtt-command-status", "children"),
