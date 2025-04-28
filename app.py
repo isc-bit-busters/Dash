@@ -227,6 +227,11 @@ app.layout = dbc.Container([
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),
     dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="reset-race-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="capture-status-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="gate1-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="gate2-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="mqtt-command-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
 ], fluid=True)
 
 
@@ -273,17 +278,24 @@ def update_ui(n, current_timer):
 
 @app.callback(
     Output("reset-status", "children"),
+    Output("reset-race-clear-interval", "n_intervals"),
     Input("reset-race", "n_clicks"),
+    Input("reset-race-clear-interval", "n_intervals"),
     prevent_initial_call=True
 )
-def reset_race(n_clicks):
-    race_state["start_time"] = None
-    race_state["finish_times"] = {}
-    race_state["running"] = False
-    race_state["elapsed"] = 0.0
-    race_state["delta"] = None
-    add_mqtt_log("[RACE 🔄] Race has been reset via dashboard")
-    return "Race has been reset."
+def reset_race(n_clicks, interval_triggered):
+    triggered = ctx.triggered_id
+    if triggered == "reset-race":
+        race_state["start_time"] = None
+        race_state["finish_times"] = {}
+        race_state["running"] = False
+        race_state["elapsed"] = 0.0
+        race_state["delta"] = None
+        add_mqtt_log("[RACE 🔄] Race has been reset via dashboard")
+        return "Race has been reset.", 0
+    elif triggered == "reset-race-clear-interval":
+        return "", dash.no_update
+    return dash.no_update, dash.no_update
 
 def send_message_to_robot(robot_id, message, sender_id="testClient"):
     def _send():
@@ -349,25 +361,37 @@ for robot_id in ['robot1', 'robot2']:
 
 @callback(
     Output("capture-status", "children"),
+    Output("capture-status-clear-interval", "n_intervals"),
     Input("capture-top-image-btn", "n_clicks"),
+    Input("capture-status-clear-interval", "n_intervals"),
     prevent_initial_call=True
 )
-def capture_new_top_image(n_clicks):
-    if n_clicks:
+def capture_new_top_image(n_clicks, interval_triggered):
+    triggered = ctx.triggered_id
+    if triggered == "capture-top-image-btn":
         send_message_to_robot("top_camera", "take_picture", "dashboardClient")
-        return "📸 Capture request sent!", False
-    return dash.no_update
+        return "📸 Capture request sent!", 0
+    elif triggered == "capture-status-clear-interval":
+        return "", dash.no_update
+    return dash.no_update, dash.no_update
 
 @app.callback(
     Output("mqtt-command-status", "children"),
+    Output("mqtt-command-clear-interval", "n_intervals"),
     Input("send-mqtt-btn", "n_clicks"),
+    Input("mqtt-command-clear-interval", "n_intervals"),
     prevent_initial_call=True
 )
-def send_mqtt_command_callback(n_clicks):
-    topic = "gate/ir"
-    command = "reset"
-    send_mqtt_command(topic, command)
-    return f"Command '{command}' sent to topic '{topic}'"
+def send_mqtt_command_callback(n_clicks, n_intervals):
+    triggered = ctx.triggered_id
+    if triggered == "send-mqtt-btn":
+        topic = "gate/ir"
+        command = "reset"
+        send_mqtt_command(topic, command)
+        return f"Command '{command}' sent to topic '{topic}'", 0
+    elif triggered == "mqtt-command-clear-interval":
+        return "", dash.no_update
+    return dash.no_update, dash.no_update
 
 def handle_gate_event(topic, payload):
     global race_state
@@ -405,19 +429,25 @@ def handle_gate_event(topic, payload):
 @app.callback(
     Output("gate1-mac-status", "children"),
     Output("gate2-mac-status", "children"),
+    Output("gate1-mac-clear-interval", "n_intervals"),
+    Output("gate2-mac-clear-interval", "n_intervals"),
     Input("send-gate1-macs", "n_clicks"),
     Input("send-gate2-macs", "n_clicks"),
+    Input("gate1-mac-clear-interval", "n_intervals"),
+    Input("gate2-mac-clear-interval", "n_intervals"),
     State("gate1-start-mac", "value"),
     State("gate1-finish-mac", "value"),
     State("gate2-start-mac", "value"),
     State("gate2-finish-mac", "value"),
     prevent_initial_call=True,
 )
-def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_start, gate1_finish, gate2_start, gate2_finish):
+def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_clear, gate2_clear, gate1_start, gate1_finish, gate2_start, gate2_finish):
     triggered = ctx.triggered_id
 
     gate1_status = dash.no_update
     gate2_status = dash.no_update
+    gate1_clear_trigger = dash.no_update
+    gate2_clear_trigger = dash.no_update
 
     if triggered == "send-gate1-macs":
         if gate1_start and gate1_finish:
@@ -430,8 +460,10 @@ def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_start, gate1_finis
             payload = {"start_mac": gate1_start, "finish_mac": gate1_finish}
             send_mqtt_command("gate1/mac_config", str(payload))
             gate1_status = f"✅ Gate 1 MAC addresses sent: {payload}"
+            gate1_clear_trigger = 0
         else:
             gate1_status = "⚠️ Please fill both Start and Finish MAC for Gate 1."
+            gate1_clear_trigger = 0
 
     if triggered == "send-gate2-macs":
         if gate2_start and gate2_finish:
@@ -445,10 +477,18 @@ def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_start, gate1_finis
             payload = {"start_mac": gate2_start, "finish_mac": gate2_finish}
             send_mqtt_command("gate2/mac_config", str(payload))
             gate2_status = f"✅ Gate 2 MAC addresses sent: {payload}"
+            gate2_clear_trigger = 0
         else:
             gate2_status = "⚠️ Please fill both Start and Finish MAC for Gate 2."
+            gate2_clear_trigger = 0
 
-    return gate1_status, gate2_status
+    elif triggered == "gate1-mac-clear-interval":
+        gate1_status = ""
+    elif triggered == "gate2-mac-clear-interval":
+        gate2_status = ""
+
+    return gate1_status, gate2_status, gate1_clear_trigger, gate2_clear_trigger
+
 # ----------------------
 # Agents
 # ----------------------
