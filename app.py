@@ -6,6 +6,7 @@ import threading
 from collections import deque
 import numpy as np
 from datetime import datetime
+import json
 
 # For Spade
 from spade.agent import Agent
@@ -20,6 +21,8 @@ import paho.mqtt.client as mqtt
 # ----------------------
 # Globals
 # ----------------------
+
+MAC_FILE = "mac_addresses.json"
 
 MQTT_BROKER = "192.168.88.253"
 MQTT_PORT = 1883
@@ -75,7 +78,23 @@ def parse_timestamp(ts_str):
         return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
     except Exception:
         return datetime.utcnow()
-    
+
+def save_mac_addresses(mac_data):
+    with open(MAC_FILE, "w") as f:
+        json.dump(mac_data, f)
+
+def load_mac_addresses():
+    if os.path.exists(MAC_FILE):
+        with open(MAC_FILE, "r") as f:
+            return json.load(f)
+    else:
+        # Default empty values if no file
+        return {
+            "gate1_start": "",
+            "gate1_finish": "",
+            "gate2_start": "",
+            "gate2_finish": ""
+        }
 
 
 # ----------------------
@@ -108,6 +127,7 @@ def robot_card(robot_id):
     ], className="mb-4")
 
 def create_gates_settings():
+    mac_addresses = load_mac_addresses()
     return dbc.Accordion([
         dbc.AccordionItem([
             dbc.Form([
@@ -115,11 +135,11 @@ def create_gates_settings():
                 dbc.Row([
                     dbc.Col([
                         dbc.Label("Start Gate MAC"),
-                        dbc.Input(id="gate1-start-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                        dbc.Input(id="gate1-start-mac", type="text", value=mac_addresses.get("gate1_start", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ]),
                     dbc.Col([
                         dbc.Label("Finish Gate MAC"),
-                        dbc.Input(id="gate1-finish-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                        dbc.Input(id="gate1-finish-mac", type="text", value=mac_addresses.get("gate1_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ])
                 ]),
                 dbc.Button("Send Gate 1 MACs", id="send-gate1-macs", color="primary", className="mt-3"),
@@ -130,11 +150,11 @@ def create_gates_settings():
                 dbc.Row([
                     dbc.Col([
                         dbc.Label("Start Gate MAC"),
-                        dbc.Input(id="gate2-start-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                        dbc.Input(id="gate2-start-mac", type="text", value=mac_addresses.get("gate2_start", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ]),
                     dbc.Col([
                         dbc.Label("Finish Gate MAC"),
-                        dbc.Input(id="gate2-finish-mac", type="text", placeholder="XX:XX:XX:XX:XX:XX")
+                        dbc.Input(id="gate2-finish-mac", type="text", value=mac_addresses.get("gate2_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ])
                 ]),
                 dbc.Button("Send Gate 2 MACs", id="send-gate2-macs", color="primary", className="mt-3"),
@@ -364,6 +384,12 @@ def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_start, gate1_finis
 
     if triggered == "send-gate1-macs":
         if gate1_start and gate1_finish:
+            save_mac_addresses({
+                "gate1_start": gate1_start,
+                "gate1_finish": gate1_finish,
+                "gate2_start": gate2_start,
+                "gate2_finish": gate2_finish
+            })
             payload = {"start_mac": gate1_start, "finish_mac": gate1_finish}
             send_mqtt_command("gate1/mac_config", str(payload))
             gate1_status = f"✅ Gate 1 MAC addresses sent: {payload}"
@@ -372,6 +398,13 @@ def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_start, gate1_finis
 
     if triggered == "send-gate2-macs":
         if gate2_start and gate2_finish:
+            save_mac_addresses({
+                "gate1_start": gate1_start,
+                "gate1_finish": gate1_finish,
+                "gate2_start": gate2_start,
+                "gate2_finish": gate2_finish
+            })
+
             payload = {"start_mac": gate2_start, "finish_mac": gate2_finish}
             send_mqtt_command("gate2/mac_config", str(payload))
             gate2_status = f"✅ Gate 2 MAC addresses sent: {payload}"
@@ -474,8 +507,18 @@ def start_mqtt_client():
 
 #  ----
 
-mqtt_pub_client = mqtt.Client()
-mqtt_pub_client.connect(MQTT_BROKER, MQTT_PORT)
+mqtt_pub_client = None
+
+def init_mqtt_pub_client():
+    global mqtt_pub_client
+    try:
+        mqtt_pub_client = mqtt.Client()
+        mqtt_pub_client.connect(MQTT_BROKER, MQTT_PORT)
+        print("MQTT publish client connected successfully.", flush=True)
+    except Exception as e:
+        mqtt_pub_client = None
+        print(f"⚠️ Could not connect MQTT publish client: {e}", flush=True)
+
 
 def send_mqtt_command(topic, command):
     mqtt_pub_client.publish(topic, command)
@@ -487,4 +530,5 @@ def send_mqtt_command(topic, command):
 if __name__ == "__main__":
     threading.Thread(target=start_agent, daemon=True).start()
     threading.Thread(target=start_mqtt_client, daemon=True).start()
+    init_mqtt_pub_client()
     app.run(host="0.0.0.0", port=8050, debug=True)
