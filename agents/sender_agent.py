@@ -3,6 +3,7 @@ from spade.behaviour import OneShotBehaviour
 import asyncio
 import os
 import threading
+import utils.connection_status as conn_status
 
 class SenderAgent(Agent):
     class SendBehaviour(OneShotBehaviour):
@@ -21,16 +22,34 @@ class SenderAgent(Agent):
             msg.set_metadata("type", "log")
             await self.send(msg)
 
+    async def on_connection_failed(self, reason):
+        conn_status.set_xmpp_connected(False)
+        print(f"⚠️ SenderAgent connection failed: {reason}", flush=True)
+
+    async def on_disconnected(self):
+        conn_status.set_xmpp_connected(False)
+        print("⚠️ SenderAgent got disconnected.", flush=True)
+
 def send_message_to_robot(robot_id, message, sender_id="testClient"):
     def _send():
         async def task():
             password = os.getenv("XMPP_PASSWORD", "plsnohack")
-            sender = SenderAgent(f"{sender_id}@prosody", password)
-            await sender.start(auto_register=True)
-            sender.add_behaviour(sender.SendBehaviour(robot_id, message))
-            await asyncio.sleep(5)
-            await sender.stop()
+            try:
+                sender = SenderAgent(f"{sender_id}@prosody", password)
+                await sender.start(auto_register=True)
+                conn_status.set_xmpp_connected(True)
+                sender.add_behaviour(sender.SendBehaviour(robot_id, message))
+                await asyncio.sleep(10)  # Slightly shorter to avoid long useless sleep
+                await sender.stop()
+                print("✅ SenderAgent finished and stopped.", flush=True)
+            except Exception as e:
+                conn_status.set_xmpp_connected(False)
+                print(f"⚠️ Could not start/send with SenderAgent: {e}", flush=True)
 
-        asyncio.run(task())
+        try:
+            asyncio.run(task())
+        except Exception as e:
+            conn_status.set_xmpp_connected(False)
+            print(f"⚠️ Fatal error during SenderAgent send: {e}", flush=True)
 
     threading.Thread(target=_send, daemon=True).start()
