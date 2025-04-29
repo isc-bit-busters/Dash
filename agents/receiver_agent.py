@@ -2,10 +2,9 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from utils.log_utils import add_log
 from utils.log_utils import latest_frames
-import asyncio
 import os
-import time
-import threading
+import asyncio
+import spade
 import utils.connection_status as conn_status
 
 class ReceiverAgent(Agent):
@@ -53,40 +52,22 @@ class ReceiverAgent(Agent):
         conn_status.set_xmpp_connected(False)
         print("⚠️ ReceiverAgent got disconnected.", flush=True)
 
-receiver = None
+def start_agent():
+    async def agent_task():
+        xmpp_username = "receiverClient"
+        xmpp_server = "prosody"
+        xmpp_password = os.getenv("XMPP_PASSWORD", "plsnohack")
+        try:
+            receiver = ReceiverAgent(f"{xmpp_username}@{xmpp_server}", xmpp_password)
+            await receiver.start(auto_register=True)
+            conn_status.set_xmpp_connected(True)
+            print("ReceiverAgent started", flush=True)
+            await spade.wait_until_finished(receiver)
+        except spade.exception.XMPPError as e:
+            print(f"XMPP Error: {e}", flush=True)
+            conn_status.set_xmpp_connected(False)
+        except Exception as e:
+            print(f"Error: {e}", flush=True)
+            conn_status.set_xmpp_connected(False)
 
-def start_receiver_agent():
-    """Start ReceiverAgent with auto-reconnect in background."""
-
-    def receiver_loop():
-        global receiver
-
-        while True:
-            if not receiver:
-                async def task():
-                    username = "receiverClient"
-                    password = os.getenv("XMPP_PASSWORD", "plsnohack")
-                    try:
-                        receiver = ReceiverAgent(f"{username}@prosody", password)
-                        await receiver.start(auto_register=True)
-                        conn_status.set_xmpp_connected(True)
-                        print("✅ Receiver Agent started", flush=True)
-                    except Exception as e:
-                        conn_status.set_xmpp_connected(False)
-                        print(f"⚠️ Could not start XMPP Receiver Agent: {e}", flush=True)
-
-                try:
-                    asyncio.run(task())
-                except Exception as e:
-                    conn_status.set_xmpp_connected(False)
-                    print(f"⚠️ Fatal error in XMPP receiver agent: {e}", flush=True)
-                    receiver = None
-
-            else:
-                if not conn_status.is_xmpp_connected():
-                    print("⚠️ Receiver agent connection lost. Trying to reconnect...", flush=True)
-                    receiver = None  # Force recreation
-
-            time.sleep(15)  # Check every 5 seconds
-
-    threading.Thread(target=receiver_loop, daemon=True).start()
+    asyncio.run(agent_task())

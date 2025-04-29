@@ -39,7 +39,7 @@ def send_message_to_robot(robot_id, message, sender_id="testClient"):
                 await sender.start(auto_register=True)
                 conn_status.set_xmpp_connected(True)
                 sender.add_behaviour(sender.SendBehaviour(robot_id, message))
-                await asyncio.sleep(10)  # Slightly shorter to avoid long useless sleep
+                await asyncio.sleep(10)
                 await sender.stop()
                 print("✅ SenderAgent finished and stopped.", flush=True)
             except Exception as e:
