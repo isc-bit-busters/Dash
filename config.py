@@ -11,3 +11,6 @@ MQTT_TOPICS = [
 ]
 
 MAC_FILE = "mac_addresses.json"
+
+ROBOT_NAMES = ["gerald", "mael"]
+TOP_CAMERA_NAME = "top_camera"

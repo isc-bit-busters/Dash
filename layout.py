@@ -3,6 +3,8 @@ import dash_bootstrap_components as dbc
 
 from utils.mac_utils import load_mac_addresses
 
+from config import ROBOT_NAMES, TOP_CAMERA_NAME
+
 def robot_card(robot_id):
     return dbc.Card([
         dbc.CardHeader(html.H4(f"{robot_id.upper()}")),
@@ -94,7 +96,7 @@ def top_camera_layout():
     return [
         html.H5("Top Camera View", className="my-4 text-center"),
         dbc.Row([
-            dbc.Col(html.Img(id="top-camera-image", style={"width": "100%", "maxHeight": "600px"})),
+            dbc.Col(html.Img(id=f"{TOP_CAMERA_NAME}-image", style={"width": "100%", "maxHeight": "600px"})),
         ], className="mb-4"),
         dbc.Row([
             dbc.Col(dbc.Button("Capture New Image", id="capture-top-image-btn", color="primary")),
@@ -120,8 +122,7 @@ layout = dbc.Container([
     *top_camera_layout(),
 
     dbc.Row([
-        dbc.Col(robot_card("robot1"), md=6),
-        dbc.Col(robot_card("robot2"), md=6)
+    dbc.Col(robot_card(robot_id), md=6) for robot_id in ROBOT_NAMES
     ]),
     html.Hr(),
     *race_timer(),
@@ -133,8 +134,7 @@ layout = dbc.Container([
     html.Div(id="mqtt-command-status"),
     dbc.Button("Send MQTT Reset", id="send-mqtt-btn", color="secondary", className="mt-3"),
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),
-    dcc.Interval(id='robot1-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
-    dcc.Interval(id='robot2-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1),
+    *[dcc.Interval(id=f'{robot_id}-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1) for robot_id in ROBOT_NAMES],
     dcc.Interval(id="reset-race-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="capture-status-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="gate1-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),

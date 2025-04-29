@@ -5,17 +5,16 @@ from agents.sender_agent import send_message_to_robot
 from mqtt.mqtt_client import send_mqtt_command
 from utils.mac_utils import save_mac_addresses
 
+from config import ROBOT_NAMES, TOP_CAMERA_NAME
 import dash
 
 
 
 def register_callbacks(app):
     @callback(
-        Output('robot1-logs', 'children'),
-        Output('robot2-logs', 'children'),
-        Output('robot1-image', 'src'),
-        Output('robot2-image', 'src'),
-        Output("top-camera-image", "src"),
+        *[Output(f"{robot_id}-logs", "children") for robot_id in ROBOT_NAMES],
+        *[Output(f"{robot_id}-image", "src") for robot_id in ROBOT_NAMES],
+        Output(f"{TOP_CAMERA_NAME}-image", "src"),
         Output('mqtt-log-display', 'children'),
         Output("live-timer", "children"),
         Output("delta-timer", "children"),
@@ -39,15 +38,21 @@ def register_callbacks(app):
 
         timer_display = f"{race_state['elapsed']:.3f} s"
 
-        r1_logs = [html.Li(log) for log in list(robot_logs['robot1'])]
-        r2_logs = [html.Li(log) for log in list(robot_logs['robot2'])]
+        robot_logs_html = [
+            [html.Li(log) for log in list(robot_logs[robot_id])]
+            for robot_id in ROBOT_NAMES
+        ]
+
+        robot_images_src = [
+            f"data:image/jpeg;base64,{latest_frames[robot_id]}" if latest_frames[robot_id] else ""
+            for robot_id in ROBOT_NAMES
+        ]
+
+        top_camera_img = f"data:image/jpeg;base64,{latest_frames[TOP_CAMERA_NAME]}" if latest_frames[TOP_CAMERA_NAME] else ""
+
         mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
-        r1_img = f"data:image/jpeg;base64,{latest_frames['robot1']}" if latest_frames['robot1'] else ""
-        r2_img = f"data:image/jpeg;base64,{latest_frames['robot2']}" if latest_frames['robot2'] else ""
-        top_camera_img = f"data:image/jpeg;base64,{latest_frames['top_camera']}" if latest_frames['top_camera'] else ""
-
-        return r1_logs, r2_logs, r1_img, r2_img, top_camera_img, mqtt_display_logs, timer_display, delta_display
+        return *robot_logs_html, *robot_images_src, top_camera_img, mqtt_display_logs, timer_display, delta_display
 
     @app.callback(
         Output("reset-status", "children"),
@@ -71,7 +76,7 @@ def register_callbacks(app):
         return dash.no_update, dash.no_update
 
 
-    for robot_id in ['robot1', 'robot2']:
+    for robot_id in ROBOT_NAMES:
         @app.callback(
             Output(f"{robot_id}-start", "disabled"),
             Output(f"{robot_id}-stop", "disabled"),
@@ -93,7 +98,7 @@ def register_callbacks(app):
                 return False, True
             return dash.no_update, dash.no_update
 
-    for robot_id in ['robot1', 'robot2']:
+    for robot_id in ROBOT_NAMES:
         @app.callback(
             Output(f"{robot_id}-penalty", "disabled"),
             Output(f"{robot_id}-penalty-status", "children"),
@@ -121,7 +126,7 @@ def register_callbacks(app):
     def capture_new_top_image(n_clicks, interval_triggered):
         triggered = ctx.triggered_id
         if triggered == "capture-top-image-btn":
-            send_message_to_robot("top_camera", "take_picture", "dashboardClient")
+            send_message_to_robot(TOP_CAMERA_NAME, "take_picture", "dashboardClient")
             return "📸 Capture request sent!", 0
         elif triggered == "capture-status-clear-interval":
             return "", dash.no_update

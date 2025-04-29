@@ -1,24 +1,16 @@
 from collections import deque
 from datetime import datetime
 
+from config import ROBOT_NAMES, TOP_CAMERA_NAME
 
-robot_logs = {
-    'robot1': deque(maxlen=10),
-    'robot2': deque(maxlen=10)
-}
+robot_logs = {robot: deque(maxlen=10) for robot in ROBOT_NAMES}
 
 mqtt_logs = deque(maxlen=20)
 
-robot_states = {
-    'robot1': False,
-    'robot2': False
-}
+robot_states = {robot: False for robot in ROBOT_NAMES}
 
-latest_frames = {
-    'robot1': None,
-    'robot2': None,
-    'top_camera' : None
-}
+latest_frames = {robot: None for robot in ROBOT_NAMES}
+latest_frames[TOP_CAMERA_NAME] = None
 
 
 def add_log(robot_id, message):
