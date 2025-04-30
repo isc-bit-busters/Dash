@@ -7,8 +7,7 @@ from utils.mac_utils import save_mac_addresses
 
 from config import ROBOT_NAMES, TOP_CAMERA_NAME
 import dash
-
-
+import json
 
 def register_callbacks(app):
     @callback(
@@ -153,67 +152,49 @@ def register_callbacks(app):
 
 
     @app.callback(
-        Output("gate1-mac-status", "children"),
-        Output("gate2-mac-status", "children"),
-        Output("gate1-mac-clear-interval", "n_intervals"),
-        Output("gate2-mac-clear-interval", "n_intervals"),
-        Input("send-gate1-macs", "n_clicks"),
-        Input("send-gate2-macs", "n_clicks"),
-        Input("gate1-mac-clear-interval", "n_intervals"),
-        Input("gate2-mac-clear-interval", "n_intervals"),
+        Output("gate-mac-status", "children"),
+        Output("gate-mac-clear-interval", "n_intervals"),
+        Input("send-gate-macs", "n_clicks"),
+        Input("gate-mac-clear-interval", "n_intervals"),
         State("gate1-start-mac", "value"),
         State("gate1-finish-mac", "value"),
         State("gate2-start-mac", "value"),
         State("gate2-finish-mac", "value"),
         prevent_initial_call=True,
     )
-    def send_gate_mac_addresses(gate1_clicks, gate2_clicks, gate1_clear, gate2_clear, gate1_start, gate1_finish, gate2_start, gate2_finish):
+    def send_gate_mac_addresses(gate_clicks, gate_clear, gate1_start, gate1_finish, gate2_start, gate2_finish):
         triggered = ctx.triggered_id
 
-        gate1_status = dash.no_update
-        gate2_status = dash.no_update
-        gate1_clear_trigger = dash.no_update
-        gate2_clear_trigger = dash.no_update
+        gate_status = dash.no_update
+        gate_clear_trigger = dash.no_update
 
-        if triggered == "send-gate1-macs":
-            if gate1_start and gate1_finish:
+        if triggered == "send-gate-macs":
+            if gate1_start and gate1_finish and gate2_start and gate2_finish:
                 save_mac_addresses({
                     "gate1_start": gate1_start,
                     "gate1_finish": gate1_finish,
                     "gate2_start": gate2_start,
                     "gate2_finish": gate2_finish
                 })
-                payload = {"start_mac": gate1_start, "finish_mac": gate1_finish}
-                send_mqtt_command("gate1/mac_config", str(payload))
-                gate1_status = f"✅ Gate 1 MAC addresses sent: {payload}"
-                gate1_clear_trigger = 0
+                payload = [
+                    {"name": "s1", "address": gate1_start, "topic": "gate1/start"},
+                    {"name": "e1", "address": gate1_finish, "topic": "gate2/finish"},
+                    {"name": "s2", "address": gate2_start, "topic": "gate2/start"},
+                    {"name": "e2", "address": gate2_finish, "topic": "gate2/finish"}
+                ]
+
+                payload_json = json.dumps(payload)  # Correct serialization
+                send_mqtt_command("gate/mac_config", payload_json)
+                gate_status = f"✅ Gate MAC addresses sent: {payload}"
+                gate_clear_trigger = 0
             else:
-                gate1_status = "⚠️ Please fill both Start and Finish MAC for Gate 1."
-                gate1_clear_trigger = 0
+                gate_status = "⚠️ Please fill both Start and Finish MAC for Gate 1."
+                gate_clear_trigger = 0
 
-        if triggered == "send-gate2-macs":
-            if gate2_start and gate2_finish:
-                save_mac_addresses({
-                    "gate1_start": gate1_start,
-                    "gate1_finish": gate1_finish,
-                    "gate2_start": gate2_start,
-                    "gate2_finish": gate2_finish
-                })
+        elif triggered == "gate-mac-clear-interval":
+            gate_status = ""
 
-                payload = {"start_mac": gate2_start, "finish_mac": gate2_finish}
-                send_mqtt_command("gate2/mac_config", str(payload))
-                gate2_status = f"✅ Gate 2 MAC addresses sent: {payload}"
-                gate2_clear_trigger = 0
-            else:
-                gate2_status = "⚠️ Please fill both Start and Finish MAC for Gate 2."
-                gate2_clear_trigger = 0
-
-        elif triggered == "gate1-mac-clear-interval":
-            gate1_status = ""
-        elif triggered == "gate2-mac-clear-interval":
-            gate2_status = ""
-
-        return gate1_status, gate2_status, gate1_clear_trigger, gate2_clear_trigger
+        return gate_status, gate_clear_trigger
     
     @app.callback(
         Output("mqtt-status", "children"),

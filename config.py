@@ -4,6 +4,8 @@ MQTT_TOPICS = [
     ("gate/ir", 0),
     ("gate1/ir", 0),
     ("gate2/ir", 0),
+    ("gate3/ir", 0),
+    ("gate4/ir", 0),
     ("gate1/start", 0),
     ("gate2/start", 0),
     ("gate1/finish", 0),

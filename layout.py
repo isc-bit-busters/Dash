@@ -10,7 +10,7 @@ def robot_card(robot_id):
         dbc.CardHeader(html.H4(f"{robot_id.upper()}")),
         dbc.CardBody([
             dbc.Row([
-                dbc.Col(html.Img(id=f"{robot_id}-image", style={"width": "100%", "maxHeight": "240px"}), md=6),
+                dbc.Col(html.Img(id=f"{robot_id}-image", style={"width": "100%", "maxHeight": "400px"}), md=6),
                 dbc.Col([
                     html.H5("Logs"),
                     html.Ul(id=f"{robot_id}-logs", className="log-list")
@@ -36,31 +36,25 @@ def create_gates_settings():
                 html.H5("Gate 1 Settings"),
                 dbc.Row([
                     dbc.Col([
-                        dbc.Label("Start Gate MAC"),
+                        dbc.Label("Start Gate 1 MAC"),
                         dbc.Input(id="gate1-start-mac", type="text", value=mac_addresses.get("gate1_start", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ]),
                     dbc.Col([
-                        dbc.Label("Finish Gate MAC"),
-                        dbc.Input(id="gate1-finish-mac", type="text", value=mac_addresses.get("gate1_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
-                    ])
-                ]),
-                dbc.Button("Send Gate 1 MACs", id="send-gate1-macs", color="primary", className="mt-3"),
-                html.Div(id="gate1-mac-status", className="mt-2", style={"fontWeight": "bold"}),
-                html.Hr(),
-
-                html.H5("Gate 2 Settings"),
-                dbc.Row([
+                        dbc.Label("Finish Gate 1 MAC"),
+                        dbc.Input(id="gate1-finish-mac", type="text", value=mac_addresses.get("gate2_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
+                    ]),
                     dbc.Col([
-                        dbc.Label("Start Gate MAC"),
+                        dbc.Label("Start Gate 2 MAC"),
                         dbc.Input(id="gate2-start-mac", type="text", value=mac_addresses.get("gate2_start", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ]),
                     dbc.Col([
-                        dbc.Label("Finish Gate MAC"),
+                        dbc.Label("Finish Gate 2 MAC"),
                         dbc.Input(id="gate2-finish-mac", type="text", value=mac_addresses.get("gate2_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ])
                 ]),
-                dbc.Button("Send Gate 2 MACs", id="send-gate2-macs", color="primary", className="mt-3"),
-                html.Div(id="gate2-mac-status", className="mt-2", style={"fontWeight": "bold"})
+                dbc.Button("Send Gate MACs", id="send-gate-macs", color="primary", className="mt-3"),
+                html.Div(id="gate-mac-status", className="mt-2", style={"fontWeight": "bold"}),
+                html.Hr(),
             ])
         ], title="Gates Settings")
     ], start_collapsed=True, always_open=True)
@@ -137,7 +131,6 @@ layout = dbc.Container([
     *[dcc.Interval(id=f'{robot_id}-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1) for robot_id in ROBOT_NAMES],
     dcc.Interval(id="reset-race-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="capture-status-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
-    dcc.Interval(id="gate1-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
-    dcc.Interval(id="gate2-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="gate-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="mqtt-command-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
 ], fluid=True)

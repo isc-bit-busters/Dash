@@ -26,6 +26,10 @@ class ReceiverAgent(Agent):
                     log_entry = f"From {msg.sender}: {msg.body}"
                     print(f"Log added : {log_entry}", flush=True)
                     add_log(robot_id, log_entry)
+                elif type_msg == "cube_detection":
+                    cube_data = msg.body
+                    print(f"Received cube detection data from {robot_id} {cube_data}", flush=True)
+                    add_log(robot_id, f"Cube detection data: {cube_data}")
                 else:
                     print(f"Unknown message type: {type_msg}", flush=True)
                     add_log(robot_id, f"Unknown message type: {type_msg}")
