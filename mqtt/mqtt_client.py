@@ -37,7 +37,8 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode()
 
     log_entry = f"[MQTT:{topic}] {payload}"
-    add_mqtt_log(log_entry)
+    if not payload == "clear":
+        add_mqtt_log(log_entry)
     print(log_entry, flush=True)
 
     if "start" in topic or "finish" in topic:

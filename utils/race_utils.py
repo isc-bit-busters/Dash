@@ -16,13 +16,16 @@ def handle_gate_event(topic, payload):
     print(f"{timestamp} received from payload {payload}", flush=True)
 
     if "start" in topic and payload == "object_detected":
-        if not race_state["running"]:
+        if not race_state["running"] and race_state["start_time"] is None:
             race_state["start_time"] = timestamp
             race_state["running"] = True
             race_state["delta"] = None
             add_mqtt_log(f"[RACE] Start triggered at {timestamp.time()}")
+        elif race_state["running"]:
+            add_mqtt_log("[RACE] Start gate already triggered")
         else:
-            add_mqtt_log(f"[RACE] Start gate already triggered")
+            add_mqtt_log("[RACE] Already started, need to reset to restart")
+
 
     elif "finish" in topic and payload == "object_detected":
         if topic not in race_state["finish_times"] and race_state["running"]:
