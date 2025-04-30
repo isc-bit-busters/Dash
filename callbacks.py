@@ -178,7 +178,7 @@ def register_callbacks(app):
                 })
                 payload = [
                     {"name": "s1", "address": gate1_start, "topic": "gate1/start"},
-                    {"name": "e1", "address": gate1_finish, "topic": "gate2/finish"},
+                    {"name": "e1", "address": gate1_finish, "topic": "gate1/finish"},
                     {"name": "s2", "address": gate2_start, "topic": "gate2/start"},
                     {"name": "e2", "address": gate2_finish, "topic": "gate2/finish"}
                 ]
