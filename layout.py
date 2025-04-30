@@ -41,7 +41,7 @@ def create_gates_settings():
                     ]),
                     dbc.Col([
                         dbc.Label("Finish Gate 1 MAC"),
-                        dbc.Input(id="gate1-finish-mac", type="text", value=mac_addresses.get("gate2_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
+                        dbc.Input(id="gate1-finish-mac", type="text", value=mac_addresses.get("gate1_finish", ""), placeholder="XX:XX:XX:XX:XX:XX")
                     ]),
                     dbc.Col([
                         dbc.Label("Start Gate 2 MAC"),
