@@ -3,6 +3,7 @@ from config import MQTT_BROKER, MQTT_PORT, MQTT_TOPICS
 from utils.log_utils import add_mqtt_log
 from utils.race_utils import handle_gate_event
 import utils.connection_status as conn_status
+from utils.connection_status import set_gate_status
 
 import threading
 import time
@@ -40,6 +41,13 @@ def on_message(client, userdata, msg):
     if not payload == "clear":
         add_mqtt_log(log_entry)
     print(log_entry, flush=True)
+
+    if payload in ("connected", "reconnected"):
+        conn_status.set_gate_status(topic, True)
+        print(f"✅ {topic} connected", flush=True)
+    elif payload == "disconnected":
+        conn_status.set_gate_status(topic, False)
+        print(f"⚠️ {topic} disconnected", flush=True)
 
     if "start" in topic or "finish" in topic:
         handle_gate_event(topic, payload)

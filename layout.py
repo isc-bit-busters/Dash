@@ -54,6 +54,12 @@ def create_gates_settings():
                 ]),
                 dbc.Button("Send Gate MACs", id="send-gate-macs", color="primary", className="mt-3"),
                 html.Div(id="gate-mac-status", className="mt-2", style={"fontWeight": "bold"}),
+                html.Div([
+                    html.Span("Gate 1 Start: "), html.Span(id="gate1-start-status"),
+                    html.Span(" | Gate 1 Finish: "), html.Span(id="gate1-finish-status"),
+                    html.Span(" | Gate 2 Start: "), html.Span(id="gate2-start-status"),
+                    html.Span(" | Gate 2 Finish: "), html.Span(id="gate2-finish-status"),
+                ], className="mt-3", style={"fontWeight": "bold", "fontSize": "1.2em"}),
                 html.Hr(),
             ])
         ], title="Gates Settings")

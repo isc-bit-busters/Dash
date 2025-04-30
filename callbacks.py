@@ -4,6 +4,7 @@ from utils.race_utils import race_state
 from agents.sender_agent import send_message_to_robot
 from mqtt.mqtt_client import send_mqtt_command
 from utils.mac_utils import save_mac_addresses
+from utils.connection_status import get_all_gate_statuses
 
 from config import ROBOT_NAMES, TOP_CAMERA_NAME
 import dash
@@ -130,6 +131,26 @@ def register_callbacks(app):
         elif triggered == "capture-status-clear-interval":
             return "", dash.no_update
         return dash.no_update, dash.no_update
+    
+    @app.callback(
+        Output("gate1-start-status", "children"),
+        Output("gate1-finish-status", "children"),
+        Output("gate2-start-status", "children"),
+        Output("gate2-finish-status", "children"),
+        Input("update-interval", "n_intervals")
+    )
+    def update_gate_connection_status(n):
+        statuses = get_all_gate_statuses()
+
+        def dot(connected):
+            return "🟢" if connected else "🔴"
+
+        return (
+            dot(statuses["gate1/start"]),
+            dot(statuses["gate1/finish"]),
+            dot(statuses["gate2/start"]),
+            dot(statuses["gate2/finish"]),
+        )
 
     @app.callback(
         Output("mqtt-command-status", "children"),
