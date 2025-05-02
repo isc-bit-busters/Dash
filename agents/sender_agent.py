@@ -14,10 +14,12 @@ class SenderAgent(Agent):
 
         async def run(self):
             from spade.message import Message
+            to = f"{self.robot_id}@prosody"
             msg = Message(
-                to="receiverClient@prosody",
+                to=to,
                 body=self.message
             )
+            print(f"Sending message to {to}: {self.message}", flush=True)
             msg.set_metadata("robot_id", self.robot_id)
             msg.set_metadata("type", "log")
             await self.send(msg)
