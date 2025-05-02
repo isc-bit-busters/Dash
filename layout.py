@@ -18,8 +18,7 @@ def robot_card(robot_id):
             ]),
             html.Br(),
             dbc.Row([
-                dbc.Col(dbc.Button("Start", id=f"{robot_id}-start", color="success", className="me-2")),
-                dbc.Col(dbc.Button("Stop", id=f"{robot_id}-stop", color="danger")),
+                dbc.Col(dbc.Button("Calibrate", id=f"{robot_id}-calibrate", color="primary", className="me-2")),
                 dbc.Col([
                     dbc.Button("Penalty", id=f"{robot_id}-penalty", color="warning", n_clicks=0),
                     html.Div(id=f"{robot_id}-penalty-status", className="mt-2", style={"color": "green", "fontWeight": "bold"})
@@ -94,17 +93,33 @@ def race_timer():
 
 def top_camera_layout():
     return [
-        html.H5("Top Camera View", className="my-4 text-center"),
         dbc.Row([
             dbc.Col(html.Img(id=f"{TOP_CAMERA_NAME}-image", style={"width": "100%", "maxHeight": "600px"})),
         ], className="mb-4"),
         dbc.Row([
-            dbc.Col(dbc.Button("Capture New Image", id="capture-top-image-btn", color="primary")),
+            dbc.Col(
+                dbc.ButtonGroup([
+                    dbc.Button("Capture New Image", id="capture-top-image-btn", color="primary"),
+                    dbc.Button("Validate", id="validate-top-image-btn", color="primary"),
+                ]),
+                width="auto", className="text-center"
+            )
         ], className="text-center"),
         dbc.Row([
             html.Div(id="capture-status", className="mt-2", style={"fontWeight": "bold", "color": "green"})
         ]),
     ]
+
+def start_stop_buttons():
+    return dbc.Row([
+        dbc.Col(
+            dbc.ButtonGroup([
+                dbc.Button("Start", id="robots-start", color="success"),
+                dbc.Button("Stop", id="robots-stop", color="danger", disabled=True),
+            ]),
+            width="auto", className="text-center"
+        )
+    ], className="text-center mb-4")
 
 connection_status_card = dbc.Card([
     dbc.CardHeader("Connection Status"),
@@ -124,6 +139,7 @@ layout = dbc.Container([
     dbc.Row([
     dbc.Col(robot_card(robot_id), md=6) for robot_id in ROBOT_NAMES
     ]),
+    start_stop_buttons(),
     html.Hr(),
     *race_timer(),
     html.Hr(),

@@ -76,60 +76,77 @@ def register_callbacks(app):
         return dash.no_update, dash.no_update
 
 
-    for robot_id in ROBOT_NAMES:
-        @app.callback(
-            Output(f"{robot_id}-start", "disabled"),
-            Output(f"{robot_id}-stop", "disabled"),
-            Input(f"{robot_id}-start", "n_clicks"),
-            Input(f"{robot_id}-stop", "n_clicks"),
-            State(f"{robot_id}-start", "disabled"),
-            prevent_initial_call=True
-        )
-        def toggle_robot(start_clicks, stop_clicks, is_start_disabled, _robot_id=robot_id):
-            triggered_id = ctx.triggered_id
-            from utils.log_utils import robot_states
-            if triggered_id and triggered_id.endswith('start'):
-                robot_states[_robot_id] = True
-                send_message_to_robot(_robot_id, "start", "dashboardClient")
-                return True, False
-            elif triggered_id and triggered_id.endswith('stop'):
-                robot_states[_robot_id] = False
-                send_message_to_robot(_robot_id, "stop", "dashboardClient")
-                return False, True
-            return dash.no_update, dash.no_update
+    @app.callback(
+        Output("robots-start", "disabled"),
+        Output("robots-stop", "disabled"),
+        Input("robots-start", "n_clicks"),
+        Input("robots-stop", "n_clicks"),
+        State("robots-start", "disabled"),
+        prevent_initial_call=True
+    )
+    def toggle_robot(start_clicks, stop_clicks, is_start_disabled):
+        triggered_id = ctx.triggered_id
+        from utils.log_utils import robot_states
+        if triggered_id and triggered_id.endswith('start'):
+            print("Start button clicked", flush=True)
+            for robot_id in ROBOT_NAMES:
+                robot_states[robot_id] = True
+                send_message_to_robot(robot_id, "start", "dashboardClient")
+            return True, False
+        elif triggered_id and triggered_id.endswith('stop'):
+            print("Stop button clicked", flush=True)
+            for robot_id in ROBOT_NAMES:
+                robot_states[robot_id] = False
+                send_message_to_robot(robot_id, "stop", "dashboardClient")
+            return False, True
+        return dash.no_update, dash.no_update
 
+    # For each robot, create a callback for the penalty button
     for robot_id in ROBOT_NAMES:
         @app.callback(
             Output(f"{robot_id}-penalty", "disabled"),
             Output(f"{robot_id}-penalty-status", "children"),
             Output(f"{robot_id}-penalty-cooldown", "n_intervals"),
             Input(f"{robot_id}-penalty", "n_clicks"),
+            Input(f"{robot_id}-calibrate", "n_clicks"),
             Input(f"{robot_id}-penalty-cooldown", "n_intervals"),
             prevent_initial_call=True
         )
-        def handle_penalty(penalty_clicks, cooldown_interval, _robot_id=robot_id):
+        def handle_penalty(penalty_clicks, validate_clicks, cooldown_interval, _robot_id=robot_id):
             triggered = ctx.triggered_id
             if triggered == f"{_robot_id}-penalty":
                 send_message_to_robot(_robot_id, "penalty", "dashboardClient")
+                print(f"Penalty sent to {_robot_id}", flush=True)
                 return True, "Penalty sent!", 0
             elif triggered == f"{_robot_id}-penalty-cooldown":
                 return False, "", dash.no_update
+            elif triggered == f"{_robot_id}-calibrate":
+                send_message_to_robot(_robot_id, "calibrate", "dashboardClient")
+                print(f"Calibration sent to {_robot_id}", flush=True)
+                return dash.no_update, "Calibration sent!", dash.no_update
+
             return dash.no_update, dash.no_update, dash.no_update
 
     @callback(
         Output("capture-status", "children"),
         Output("capture-status-clear-interval", "n_intervals"),
         Input("capture-top-image-btn", "n_clicks"),
+        Input("validate-top-image-btn", "n_clicks"),
         Input("capture-status-clear-interval", "n_intervals"),
         prevent_initial_call=True
     )
-    def capture_new_top_image(n_clicks, interval_triggered):
+    def capture_new_top_image(cap_clicks, val_clicks, interval_triggered):
         triggered = ctx.triggered_id
         if triggered == "capture-top-image-btn":
+            print("Capture request sent to top camera", flush=True)
             send_message_to_robot(TOP_CAMERA_NAME, "take_picture", "dashboardClient")
             return "📸 Capture request sent!", 0
         elif triggered == "capture-status-clear-interval":
             return "", dash.no_update
+        elif triggered == "validate-top-image-btn":
+            print("Validation request sent to top camera", flush=True)
+            send_message_to_robot(TOP_CAMERA_NAME, "validate", "dashboardClient")
+            return "✅ Validation request sent!", 0
         return dash.no_update, dash.no_update
     
     @app.callback(
