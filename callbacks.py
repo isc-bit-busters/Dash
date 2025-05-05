@@ -50,7 +50,7 @@ def register_callbacks(app):
         ]
 
         robot_penalty_counts = [
-            html.Div(f"Penalties: {race_state['penalties'][robot_id]}")
+            html.Div(f"Penalties: {race_state['penalties'][robot_id]}", style={"color": "red", "fontWeight": "bold"}) if race_state['penalties'][robot_id] > 0 else ""
             for robot_id in ROBOT_NAMES
         ]
 

@@ -10,7 +10,13 @@ def robot_card(robot_id):
         dbc.CardHeader(html.H4(f"{robot_id.upper()}")),
         dbc.CardBody([
             dbc.Row([
-                dbc.Col(html.Img(id=f"{robot_id}-image", style={"width": "100%", "maxHeight": "400px"}), md=6),
+                dbc.Col(html.Img(id=f"{robot_id}-image", style={
+                    "maxWidth": "100%",
+                    "height": "auto",
+                    "maxHeight": "400px",
+                    "objectFit": "contain",
+                    "border": "1px solid #ccc"
+                }), md=6),
                 dbc.Col([
                     html.H5("Logs"),
                     html.Ul(id=f"{robot_id}-logs", className="log-list")
@@ -95,7 +101,7 @@ def race_timer():
 def top_camera_layout():
     return [
         dbc.Row([
-            dbc.Col(html.Img(id=f"{TOP_CAMERA_NAME}-image", style={"width": "100%", "maxHeight": "600px"})),
+            dbc.Col(html.Img(id=f"{TOP_CAMERA_NAME}-image", style={"maxWidth": "100%", "height": "auto", "maxHeight": "600px", "objectFit": "contain"})),
         ], className="mb-4"),
         dbc.Row([
             dbc.Col(
@@ -150,7 +156,7 @@ layout = dbc.Container([
     
     html.Div(id="mqtt-command-status"),
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),
-    *[dcc.Interval(id=f'{robot_id}-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1) for robot_id in ROBOT_NAMES],
+    *[dcc.Interval(id=f'{robot_id}-penalty-cooldown', interval=1500, n_intervals=0, max_intervals=1) for robot_id in ROBOT_NAMES],
     dcc.Interval(id="reset-race-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="capture-status-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="gate-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
