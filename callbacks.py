@@ -139,13 +139,17 @@ def register_callbacks(app):
         triggered = ctx.triggered_id
         if triggered == "capture-top-image-btn":
             print("Capture request sent to top camera", flush=True)
-            send_message_to_robot(TOP_CAMERA_NAME, "take_picture", "dashboardClient")
+            for robot_id in ROBOT_NAMES:
+                send_message_to_robot(robot_id, "take_picture", "dashboardClient")
+            # send_message_to_robot(TOP_CAMERA_NAME, "take_picture", "dashboardClient")
             return "📸 Capture request sent!", 0
         elif triggered == "capture-status-clear-interval":
             return "", dash.no_update
         elif triggered == "validate-top-image-btn":
             print("Validation request sent to top camera", flush=True)
-            send_message_to_robot(TOP_CAMERA_NAME, "validate", "dashboardClient")
+            for robot_id in ROBOT_NAMES:
+                send_message_to_robot(robot_id, "validate", "dashboardClient")
+            # send_message_to_robot(TOP_CAMERA_NAME, "validate", "dashboardClient")
             return "✅ Validation request sent!", 0
         return dash.no_update, dash.no_update
     
