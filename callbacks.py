@@ -15,6 +15,7 @@ def register_callbacks(app):
         *[Output(f"{robot_id}-logs", "children") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-image", "src") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-penalty-count", "children") for robot_id in ROBOT_NAMES],
+        *[Output(f"{robot_id}-penalty", "disabled") for robot_id in ROBOT_NAMES],
         Output(f"{TOP_CAMERA_NAME}-image", "src"),
         Output('mqtt-log-display', 'children'),
         Output("live-timer", "children"),
@@ -57,11 +58,17 @@ def register_callbacks(app):
             for robot_id in ROBOT_NAMES
         ]
 
+        robot_penalty_buttons = [
+            not race_state["running"] or race_state["penalty_cooldown"][robot_id]
+            for robot_id in ROBOT_NAMES
+        ]
+
+
         top_camera_img = f"data:image/jpeg;base64,{latest_frames[TOP_CAMERA_NAME]}" if latest_frames[TOP_CAMERA_NAME] else ""
 
         mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
-        return *robot_logs_html, *robot_images_src, *robot_penalty_counts, top_camera_img, mqtt_display_logs, timer_display, delta_display
+        return *robot_logs_html, *robot_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display
 
     @app.callback(
         Output("reset-status", "children"),
@@ -114,7 +121,6 @@ def register_callbacks(app):
     # For each robot, create a callback for the penalty button
     for robot_id in ROBOT_NAMES:
         @app.callback(
-            Output(f"{robot_id}-penalty", "disabled"),
             Output(f"{robot_id}-penalty-status", "children"),
             Output(f"{robot_id}-penalty-cooldown", "n_intervals"),
             Input(f"{robot_id}-penalty", "n_clicks"),
@@ -131,20 +137,22 @@ def register_callbacks(app):
                 if not race_state["running"]:
                     log_msg = "⛔ Cannot apply penalty: Race not running."
                     add_log(_robot_id, log_msg)
-                    return True, log_msg, 0
+                    return log_msg, 0
                 race_state["penalties"][_robot_id] += 1
                 race_state["elapsed"] += PENALTY_TIME_SECONDS
+                race_state["penalty_cooldown"][_robot_id] = True
                 log_msg = f"[PENALTY] +{PENALTY_TIME_SECONDS}s penalty applied to {_robot_id}. Total penalties: {race_state['penalties'][_robot_id]}"
                 add_log(_robot_id, log_msg)
-                return True, log_msg, 0
+                return log_msg, 0
             elif triggered == f"{_robot_id}-penalty-cooldown":
-                return False, "", dash.no_update
+                race_state["penalty_cooldown"][_robot_id] = False
+                return "", dash.no_update   
             elif triggered == f"{_robot_id}-calibrate":
                 send_message_to_robot(_robot_id, "calibrate", "dashboardClient")
                 print(f"Calibration sent to {_robot_id}", flush=True)
-                return dash.no_update, "Calibration sent!", dash.no_update
+                return "Calibration sent!", dash.no_update
 
-            return dash.no_update, dash.no_update, dash.no_update
+            return dash.no_update, dash.no_update
 
     @callback(
         Output("capture-status", "children"),

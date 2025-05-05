@@ -9,6 +9,7 @@ race_state = {
     "elapsed": 0.0,
     "delta": None,
     "penalties": {robot: 0 for robot in ROBOT_NAMES},
+    "penalty_cooldown": {robot: False for robot in ROBOT_NAMES},
 }
 
 def handle_gate_event(topic, payload):
