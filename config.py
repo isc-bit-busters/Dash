@@ -13,3 +13,6 @@ MAC_FILE = "mac_addresses.json"
 
 ROBOT_NAMES = ["gerald", "mael"]
 TOP_CAMERA_NAME = "top_camera"
+
+
+PENALTY_TIME_SECONDS = 5

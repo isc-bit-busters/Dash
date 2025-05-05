@@ -6,7 +6,7 @@ from mqtt.mqtt_client import send_mqtt_command
 from utils.mac_utils import save_mac_addresses
 from utils.connection_status import get_all_gate_statuses
 
-from config import ROBOT_NAMES, TOP_CAMERA_NAME
+from config import ROBOT_NAMES, TOP_CAMERA_NAME, PENALTY_TIME_SECONDS
 import dash
 import json
 
@@ -14,6 +14,7 @@ def register_callbacks(app):
     @callback(
         *[Output(f"{robot_id}-logs", "children") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-image", "src") for robot_id in ROBOT_NAMES],
+        *[Output(f"{robot_id}-penalty-count", "children") for robot_id in ROBOT_NAMES],
         Output(f"{TOP_CAMERA_NAME}-image", "src"),
         Output('mqtt-log-display', 'children'),
         Output("live-timer", "children"),
@@ -48,11 +49,16 @@ def register_callbacks(app):
             for robot_id in ROBOT_NAMES
         ]
 
+        robot_penalty_counts = [
+            html.Div(f"Penalties: {race_state['penalties'][robot_id]}")
+            for robot_id in ROBOT_NAMES
+        ]
+
         top_camera_img = f"data:image/jpeg;base64,{latest_frames[TOP_CAMERA_NAME]}" if latest_frames[TOP_CAMERA_NAME] else ""
 
         mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
-        return *robot_logs_html, *robot_images_src, top_camera_img, mqtt_display_logs, timer_display, delta_display
+        return *robot_logs_html, *robot_images_src, *robot_penalty_counts, top_camera_img, mqtt_display_logs, timer_display, delta_display
 
     @app.callback(
         Output("reset-status", "children"),
@@ -69,6 +75,7 @@ def register_callbacks(app):
             race_state["running"] = False
             race_state["elapsed"] = 0.0
             race_state["delta"] = None
+            race_state["penalties"] = {robot: 0 for robot in ROBOT_NAMES}
             add_mqtt_log("[RACE 🔄] Race has been reset via dashboard")
             return "Race has been reset.", 0
         elif triggered == "reset-race-clear-interval":
@@ -115,9 +122,13 @@ def register_callbacks(app):
         def handle_penalty(penalty_clicks, validate_clicks, cooldown_interval, _robot_id=robot_id):
             triggered = ctx.triggered_id
             if triggered == f"{_robot_id}-penalty":
-                send_message_to_robot(_robot_id, "penalty", "dashboardClient")
-                print(f"Penalty sent to {_robot_id}", flush=True)
-                return True, "Penalty sent!", 0
+                # send_message_to_robot(_robot_id, "penalty", "dashboardClient")
+                # print(f"Penalty sent to {_robot_id}", flush=True)
+                race_state["penalties"][_robot_id] += 1
+                race_state["elapsed"] += PENALTY_TIME_SECONDS
+                log_msg = f"[PENALTY] +{PENALTY_TIME_SECONDS}s penalty applied to {_robot_id}. Total penalties: {race_state['penalties'][_robot_id]}"
+                add_log(_robot_id, log_msg)
+                return True, log_msg, 0
             elif triggered == f"{_robot_id}-penalty-cooldown":
                 return False, "", dash.no_update
             elif triggered == f"{_robot_id}-calibrate":

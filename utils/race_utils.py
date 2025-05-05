@@ -1,11 +1,14 @@
 from utils.log_utils import parse_timestamp, add_mqtt_log
 
+from config import ROBOT_NAMES, PENALTY_TIME_SECONDS
+
 race_state = {
     "start_time": None,
     "finish_times": {},
     "running": False,
     "elapsed": 0.0,
-    "delta": None
+    "delta": None,
+    "penalties": {robot: 0 for robot in ROBOT_NAMES},
 }
 
 def handle_gate_event(topic, payload):
@@ -37,7 +40,9 @@ def handle_gate_event(topic, payload):
                 first_finish = min(finish_times)
                 last_finish = max(finish_times)
                 race_state["delta"] = abs((finish_times[0] - finish_times[1]).total_seconds())
-                race_state["elapsed"] = (last_finish - race_state["start_time"]).total_seconds()
+                base_elapsed = (last_finish - race_state["start_time"]).total_seconds()
+                penalty_time = sum(race_state.get("penalties", {}).values()) * PENALTY_TIME_SECONDS
+                race_state["elapsed"] = base_elapsed + penalty_time
                 race_state["running"] = False
 
                 add_mqtt_log(f"[RACE ✅] Total time: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s")

@@ -22,7 +22,8 @@ def robot_card(robot_id):
                 dbc.Col([
                     dbc.Button("Penalty", id=f"{robot_id}-penalty", color="warning", n_clicks=0),
                     html.Div(id=f"{robot_id}-penalty-status", className="mt-2", style={"color": "green", "fontWeight": "bold"})
-                ])
+                ]),
+                html.Div(id=f"{robot_id}-penalty-count", className="mt-2", style={"fontWeight": "bold", "color": "red"}),
             ])
         ])
     ], className="mb-4")
