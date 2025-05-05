@@ -45,6 +45,8 @@ def handle_gate_event(topic, payload):
                 race_state["elapsed"] = base_elapsed + penalty_time
                 race_state["running"] = False
 
-                add_mqtt_log(f"[RACE ✅] Total time: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s")
+                add_mqtt_log(
+                    f"[RACE ✅] Base: {base_elapsed:.3f}s + Penalty: {penalty_time:.3f}s = Total: {race_state['elapsed']:.3f}s | Δ Finish: {race_state['delta']:.3f}s"
+                )
         else:
             add_mqtt_log(f"[RACE] Finish gate {topic} already triggered")

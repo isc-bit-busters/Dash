@@ -28,7 +28,10 @@ def register_callbacks(app):
 
         now = datetime.now()
         if race_state["running"] and race_state["start_time"]:
-            race_state["elapsed"] = (now - race_state["start_time"]).total_seconds()
+            # race_state["elapsed"] = (now - race_state["start_time"]).total_seconds()
+            base_elapsed = (now - race_state["start_time"]).total_seconds()
+            penalty_time = sum(race_state.get("penalties", {}).values()) * PENALTY_TIME_SECONDS
+            race_state["elapsed"] = base_elapsed + penalty_time
 
         finish_times = list(race_state["finish_times"].values())
         if race_state["running"] and len(finish_times) == 1:
@@ -124,6 +127,11 @@ def register_callbacks(app):
             if triggered == f"{_robot_id}-penalty":
                 # send_message_to_robot(_robot_id, "penalty", "dashboardClient")
                 # print(f"Penalty sent to {_robot_id}", flush=True)
+
+                if not race_state["running"]:
+                    log_msg = "⛔ Cannot apply penalty: Race not running."
+                    add_log(_robot_id, log_msg)
+                    return True, log_msg, 0
                 race_state["penalties"][_robot_id] += 1
                 race_state["elapsed"] += PENALTY_TIME_SECONDS
                 log_msg = f"[PENALTY] +{PENALTY_TIME_SECONDS}s penalty applied to {_robot_id}. Total penalties: {race_state['penalties'][_robot_id]}"
