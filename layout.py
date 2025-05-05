@@ -101,7 +101,19 @@ def race_timer():
 def top_camera_layout():
     return [
         dbc.Row([
-            dbc.Col(html.Img(id=f"{TOP_CAMERA_NAME}-image", style={"maxWidth": "100%", "height": "auto", "maxHeight": "600px", "objectFit": "contain"})),
+            dbc.Col(
+                html.Img(
+                    id=f"{TOP_CAMERA_NAME}-image",
+                    style={
+                        "height": "100%",
+                        "width": "auto",
+                        "objectFit": "contain",
+                        "display": "block",
+                        "margin": "0 auto"
+                    }
+                ),
+                style={"height": "40vh"}
+            ),
         ], className="mb-4"),
         dbc.Row([
             dbc.Col(
