@@ -170,26 +170,6 @@ def register_callbacks(app):
         )
 
     @app.callback(
-        Output("mqtt-command-status", "children"),
-        Output("mqtt-command-clear-interval", "n_intervals"),
-        Input("send-mqtt-btn", "n_clicks"),
-        Input("mqtt-command-clear-interval", "n_intervals"),
-        prevent_initial_call=True
-    )
-    def send_mqtt_command_callback(n_clicks, n_intervals):
-        triggered = ctx.triggered_id
-        if triggered == "send-mqtt-btn":
-            topic = "gate/ir"
-            command = "reset"
-            send_mqtt_command(topic, command)
-            return f"Command '{command}' sent to topic '{topic}'", 0
-        elif triggered == "mqtt-command-clear-interval":
-            return "", dash.no_update
-        return dash.no_update, dash.no_update
-
-
-
-    @app.callback(
         Output("gate-mac-status", "children"),
         Output("gate-mac-clear-interval", "n_intervals"),
         Input("send-gate-macs", "n_clicks"),

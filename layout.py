@@ -148,7 +148,6 @@ layout = dbc.Container([
     create_gates_settings(),
     
     html.Div(id="mqtt-command-status"),
-    dbc.Button("Send MQTT Reset", id="send-mqtt-btn", color="secondary", className="mt-3"),
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),
     *[dcc.Interval(id=f'{robot_id}-penalty-cooldown', interval=3000, n_intervals=0, max_intervals=1) for robot_id in ROBOT_NAMES],
     dcc.Interval(id="reset-race-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
