@@ -92,11 +92,11 @@ def robotic_arm_card():
                 ])
             ]),
             html.Div([
-                dbc.Label("Command Body (JSON or string)", id="xmpp-command-body-label"),
+                dbc.Label("Command value", id="xmpp-command-body-label"),
                 dbc.Textarea(id="xmpp-command-body", placeholder="Enter you value here..."),
             ], id="xmpp-command-body-container"),
             html.Div(id="xmpp-command-body-error", className="text-danger"),
-            dbc.Button("Send XMPP Command", id="send-xmpp-command-btn", color="primary", className="mt-2"),
+            dbc.Button("Send", id="send-xmpp-command-btn", color="primary", className="mt-2"),
             html.Div(id="xmpp-command-status", className="mt-2", style={"fontWeight": "bold"}),
             html.Hr(),
             html.H5("Received Messages"),
@@ -166,10 +166,7 @@ def top_camera_layout():
 def start_stop_buttons():
     return dbc.Row([
         dbc.Col(
-            dbc.ButtonGroup([
-                dbc.Button("Start", id="robots-start", color="success"),
-                dbc.Button("Stop", id="robots-stop", color="danger", disabled=True),
-            ]),
+            dbc.Button("Start", id="robots-start", color="success", disabled=False),
             width="auto", className="text-center"
         )
     ], className="text-center mb-4")
@@ -205,6 +202,7 @@ layout = dbc.Container([
     html.Div(id="mqtt-command-status"),
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),
     *[dcc.Interval(id=f'{robot_id}-penalty-cooldown', interval=1500, n_intervals=0, max_intervals=1) for robot_id in ROBOT_NAMES],
+    dcc.Interval(id="robots-start-cooldown", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="reset-race-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="capture-status-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="gate-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),

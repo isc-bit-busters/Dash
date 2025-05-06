@@ -97,28 +97,23 @@ def register_callbacks(app):
 
 
     @app.callback(
+        Output("robots-start-cooldown", "n_intervals"),
         Output("robots-start", "disabled"),
-        Output("robots-stop", "disabled"),
         Input("robots-start", "n_clicks"),
-        Input("robots-stop", "n_clicks"),
-        State("robots-start", "disabled"),
+        Input("robots-start-cooldown", "n_intervals"),
         prevent_initial_call=True
     )
-    def toggle_robot(start_clicks, stop_clicks, is_start_disabled):
-        triggered_id = ctx.triggered_id
+    def toggle_robot(start_clicks, is_start_disabled):
+        triggered = ctx.triggered_id
         from utils.log_utils import robot_states
-        if triggered_id and triggered_id.endswith('start'):
+        if triggered == "robots-start":
             print("Start button clicked", flush=True)
             for robot_id in ROBOT_NAMES:
                 robot_states[robot_id] = True
                 send_message_to_robot(robot_id, "start", "dashboardClient")
-            return True, False
-        elif triggered_id and triggered_id.endswith('stop'):
-            print("Stop button clicked", flush=True)
-            for robot_id in ROBOT_NAMES:
-                robot_states[robot_id] = False
-                send_message_to_robot(robot_id, "stop", "dashboardClient")
-            return False, True
+            return 0, True
+        elif triggered == "robots-start-cooldown":
+            return dash.no_update, False
         return dash.no_update, dash.no_update
 
     # For each robot, create a callback for the penalty button
