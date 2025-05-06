@@ -280,14 +280,9 @@ def register_callbacks(app):
     def send_custom_xmpp_command(n_clicks, cmd_type, body):
         import json
         try:
-            # Try parsing body as JSON, fallback to raw string
-            try:
-                parsed_body = json.loads(body) if body else ""
-            except json.JSONDecodeError:
-                parsed_body = body
             target_id = "armClient" 
 
-            send_message_to_robot(target_id, parsed_body, sender_id="dashboardClient", msg_type=cmd_type)
+            send_message_to_robot(target_id, body, sender_id="dashboardClient", msg_type=cmd_type)
             return f"✅ Command '{cmd_type}' sent to {target_id}."
 
         except Exception as e:
