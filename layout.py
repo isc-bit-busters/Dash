@@ -71,6 +71,37 @@ def create_gates_settings():
         ], title="Gates Settings")
     ], start_collapsed=True, always_open=True)
 
+def robotic_arm_card():
+    return dbc.Accordion([
+        dbc.AccordionItem([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Label("Command Type"),
+                    dcc.Dropdown(
+                        id="xmpp-command-type",
+                        options=[
+                            {"label": t, "value": t} for t in [
+                                "set_host_ip",
+                                "point", "trajectory", 
+                                "activate_gripper", "open_gripper", "close_gripper", 
+                                "set_speed", "set_acceleration"
+                            ]
+                        ],
+                        placeholder="Select a command"
+                    )
+                ])
+            ]),
+            dbc.Label("Command Body (JSON or string)"),
+            dbc.Textarea(id="xmpp-command-body", placeholder='E.g. 10.30.5.159, [0.3, 0.2, 0.26, 0, 0, -1] or leave empty for gripper'),
+            dbc.Button("Send XMPP Command", id="send-xmpp-command-btn", color="primary", className="mt-2"),
+            html.Div(id="xmpp-command-status", className="mt-2", style={"fontWeight": "bold"}),
+            html.Hr(),
+            html.H5("Received Messages"),
+            html.Ul(id="robotic-arm-log-display", style={"maxHeight": "200px", "overflowY": "scroll"})
+        ], title="Robotic Arm Command")
+    ], start_collapsed=True, always_open=True)
+
+
 def mqtt_log_card():
     return dbc.Card([
         dbc.CardHeader("Latest Race Logs"),
@@ -165,6 +196,8 @@ layout = dbc.Container([
     mqtt_log_card(),
     html.Hr(),
     create_gates_settings(),
+    html.Hr(),
+    robotic_arm_card(),
     
     html.Div(id="mqtt-command-status"),
     dcc.Interval(id='update-interval', interval=100, n_intervals=0),

@@ -7,6 +7,8 @@ robot_logs = {robot: deque(maxlen=10) for robot in ROBOT_NAMES}
 
 mqtt_logs = deque(maxlen=20)
 
+arm_logs = deque(maxlen=3)
+
 robot_states = {robot: False for robot in ROBOT_NAMES}
 
 latest_frames = {robot: None for robot in ROBOT_NAMES}
@@ -19,6 +21,9 @@ def add_log(robot_id, message):
 
 def add_mqtt_log(msg):
     mqtt_logs.appendleft(msg)
+
+def add_arm_log(msg):
+    arm_logs.appendleft(msg)
 
 def parse_timestamp(ts_str):
     try:

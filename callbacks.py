@@ -20,11 +20,12 @@ def register_callbacks(app):
         Output('mqtt-log-display', 'children'),
         Output("live-timer", "children"),
         Output("delta-timer", "children"),
+        Output("robotic-arm-log-display", "children"),
         Input('update-interval', 'n_intervals'),
         State('live-timer', 'children'),
     )
     def update_ui(n, current_timer):
-        from utils.log_utils import robot_logs, mqtt_logs, latest_frames
+        from utils.log_utils import robot_logs, mqtt_logs, latest_frames, arm_logs
         from datetime import datetime
 
         now = datetime.now()
@@ -63,12 +64,13 @@ def register_callbacks(app):
             for robot_id in ROBOT_NAMES
         ]
 
-
         top_camera_img = f"data:image/jpeg;base64,{latest_frames[TOP_CAMERA_NAME]}" if latest_frames[TOP_CAMERA_NAME] else ""
 
         mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
-        return *robot_logs_html, *robot_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display
+        arm_logs_html = [[html.Li(log) for log in list(arm_logs)]]
+
+        return *robot_logs_html, *robot_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display, arm_logs_html
 
     @app.callback(
         Output("reset-status", "children"),
@@ -267,3 +269,26 @@ def register_callbacks(app):
             card_style = {"display": "block"}
         
         return mqtt_text, xmpp_text, card_style
+    
+    @app.callback(
+        Output("xmpp-command-status", "children"),
+        Input("send-xmpp-command-btn", "n_clicks"),
+        State("xmpp-command-type", "value"),
+        State("xmpp-command-body", "value"),
+        prevent_initial_call=True
+    )
+    def send_custom_xmpp_command(n_clicks, cmd_type, body):
+        import json
+        try:
+            # Try parsing body as JSON, fallback to raw string
+            try:
+                parsed_body = json.loads(body) if body else ""
+            except json.JSONDecodeError:
+                parsed_body = body
+            target_id = "armClient" 
+
+            send_message_to_robot(target_id, parsed_body, sender_id="dashboardClient", msg_type=cmd_type)
+            return f"✅ Command '{cmd_type}' sent to {target_id}."
+
+        except Exception as e:
+            return f"❌ Failed to send command: {str(e)}"

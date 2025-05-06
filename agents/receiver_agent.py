@@ -1,6 +1,6 @@
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
-from utils.log_utils import add_log
+from utils.log_utils import add_log, add_arm_log
 from utils.log_utils import latest_frames
 import os
 import asyncio
@@ -30,6 +30,9 @@ class ReceiverAgent(Agent):
                     cube_data = msg.body
                     print(f"Received cube detection data from {robot_id} {cube_data}", flush=True)
                     add_log(robot_id, f"Cube detection data: {cube_data}")
+                elif type_msg == "arm_log":
+                    print(f"Received arm log: {msg.body}", flush=True)
+                    add_arm_log(msg.body)
                 else:
                     print(f"Unknown message type: {type_msg}", flush=True)
                     add_log(robot_id, f"Unknown message type: {type_msg}")
