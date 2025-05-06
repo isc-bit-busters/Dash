@@ -206,4 +206,5 @@ layout = dbc.Container([
     dcc.Interval(id="capture-status-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="gate-mac-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
     dcc.Interval(id="mqtt-command-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id="xmpp-command-clear-interval", interval=3000, n_intervals=0, max_intervals=1),
 ], fluid=True)

@@ -272,18 +272,25 @@ def register_callbacks(app):
     
     @app.callback(
         Output("xmpp-command-status", "children"),
+        Output("xmpp-command-clear-interval", "n_intervals"),
         Input("send-xmpp-command-btn", "n_clicks"),
+        Input("xmpp-command-clear-interval", "n_intervals"),
         State("xmpp-command-type", "value"),
         State("xmpp-command-body", "value"),
         prevent_initial_call=True
     )
-    def send_custom_xmpp_command(n_clicks, cmd_type, body):
-        import json
-        try:
-            target_id = "armClient" 
+    def send_custom_xmpp_command(n_clicks, clear_interval, cmd_type, body):
+        triggered = ctx.triggered_id
 
-            send_message_to_robot(target_id, body, sender_id="dashboardClient", msg_type=cmd_type)
-            return f"✅ Command '{cmd_type}' sent to {target_id}."
+        if triggered == "send-xmpp-command-btn":
+            try:
+                target_id = "armClient"
+                send_message_to_robot(target_id, body, sender_id="dashboardClient", msg_type=cmd_type)
+                return f"✅ Command '{cmd_type}' sent to {target_id}.", 0
+            except Exception as e:
+                return f"❌ Failed to send command: {str(e)}", 0
 
-        except Exception as e:
-            return f"❌ Failed to send command: {str(e)}"
+        elif triggered == "xmpp-command-clear-interval":
+            return "", dash.no_update
+
+        return dash.no_update, dash.no_update
