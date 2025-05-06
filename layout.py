@@ -30,7 +30,16 @@ def robot_card(robot_id):
                     html.Div(id=f"{robot_id}-penalty-status", className="mt-2", style={"color": "green", "fontWeight": "bold"})
                 ]),
                 html.Div(id=f"{robot_id}-penalty-count", className="mt-2", style={"fontWeight": "bold", "color": "red"}),
-            ])
+            ]),
+            html.Br(),
+            dbc.Col(html.Img(id=f"{robot_id}-path-image", style={
+                "maxWidth": "100%",
+                "height": "auto",
+                "maxHeight": "300px",
+                "objectFit": "contain",
+                "border": "1px solid #ccc",
+                "marginTop": "10px"
+            })),
         ])
     ], className="mb-4")
 

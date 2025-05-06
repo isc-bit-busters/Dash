@@ -15,6 +15,7 @@ def register_callbacks(app):
     @callback(
         *[Output(f"{robot_id}-logs", "children") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-image", "src") for robot_id in ROBOT_NAMES],
+        *[Output(f"{robot_id}-path-image", "src") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-penalty-count", "children") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-penalty", "disabled") for robot_id in ROBOT_NAMES],
         Output(f"{TOP_CAMERA_NAME}-image", "src"),
@@ -26,7 +27,7 @@ def register_callbacks(app):
         State('live-timer', 'children'),
     )
     def update_ui(n, current_timer):
-        from utils.log_utils import robot_logs, mqtt_logs, latest_frames, arm_logs
+        from utils.log_utils import robot_logs, mqtt_logs, latest_frames, arm_logs, latest_path_frames
         from datetime import datetime
 
         now = datetime.now()
@@ -60,6 +61,11 @@ def register_callbacks(app):
             for robot_id in ROBOT_NAMES
         ]
 
+        robot_path_images_src = [
+            f"data:image/jpeg;base64,{latest_path_frames[robot_id]}" if latest_path_frames[robot_id] else ""
+            for robot_id in ROBOT_NAMES
+        ]
+
         robot_penalty_buttons = [
             not race_state["running"] or race_state["penalty_cooldown"][robot_id]
             for robot_id in ROBOT_NAMES
@@ -71,7 +77,7 @@ def register_callbacks(app):
 
         arm_logs_html = [html.Li(log) for log in list(arm_logs)]
 
-        return *robot_logs_html, *robot_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display, arm_logs_html
+        return *robot_logs_html, *robot_images_src, *robot_path_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display, arm_logs_html
 
     @app.callback(
         Output("reset-status", "children"),

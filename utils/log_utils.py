@@ -12,6 +12,7 @@ arm_logs = deque(maxlen=3)
 robot_states = {robot: False for robot in ROBOT_NAMES}
 
 latest_frames = {robot: None for robot in ROBOT_NAMES}
+latest_path_frames = {robot: None for robot in ROBOT_NAMES}
 latest_frames[TOP_CAMERA_NAME] = None
 
 

@@ -33,6 +33,11 @@ class ReceiverAgent(Agent):
                 elif type_msg == "arm_log":
                     print(f"Received arm log: {msg.body}", flush=True)
                     add_arm_log(msg.body)
+                elif type_msg == "path_image":
+                    print(f"Received path image from {robot_id}", flush=True)
+                    latest_frames[robot_id] = msg.body
+                    log_entry = f"Path image received from {robot_id}"
+                    add_log(robot_id, log_entry)
                 else:
                     print(f"Unknown message type: {type_msg}", flush=True)
                     add_log(robot_id, f"Unknown message type: {type_msg}")
