@@ -91,8 +91,11 @@ def robotic_arm_card():
                     )
                 ])
             ]),
-            dbc.Label("Command Body (JSON or string)"),
-            dbc.Textarea(id="xmpp-command-body", placeholder='E.g. 10.30.5.159, [0.3, 0.2, 0.26, 0, 0, -1] or leave empty for gripper'),
+            html.Div([
+                dbc.Label("Command Body (JSON or string)", id="xmpp-command-body-label"),
+                dbc.Textarea(id="xmpp-command-body", placeholder='E.g. 10.30.5.159, [0.3, 0.2, 0.26, 0, 0, -1] or leave empty for gripper'),
+            ], id="xmpp-command-body-container"),
+            html.Div(id="xmpp-command-body-error", className="text-danger"),
             dbc.Button("Send XMPP Command", id="send-xmpp-command-btn", color="primary", className="mt-2"),
             html.Div(id="xmpp-command-status", className="mt-2", style={"fontWeight": "bold"}),
             html.Hr(),

@@ -294,3 +294,14 @@ def register_callbacks(app):
             return "", dash.no_update
 
         return dash.no_update, dash.no_update
+    
+    @callback(
+        Output("xmpp-command-body-container", "style"),
+        Input("xmpp-command-type", "value"),
+    )
+    def toggle_command_body_visibility(cmd_type):
+        hide_for = {None, "activate_gripper", "open_gripper", "close_gripper"}
+
+        if cmd_type in hide_for:
+            return {"display": "none"}
+        return {"display": "block"}
