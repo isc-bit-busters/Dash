@@ -38,7 +38,6 @@ def handle_gate_event(topic, payload):
 
             if len(race_state["finish_times"]) >= 2:
                 finish_times = list(race_state["finish_times"].values())
-                first_finish = min(finish_times)
                 last_finish = max(finish_times)
                 race_state["delta"] = abs((finish_times[0] - finish_times[1]).total_seconds())
                 base_elapsed = (last_finish - race_state["start_time"]).total_seconds()

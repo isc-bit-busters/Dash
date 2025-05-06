@@ -7,7 +7,7 @@ robot_logs = {robot: deque(maxlen=10) for robot in ROBOT_NAMES}
 
 mqtt_logs = deque(maxlen=20)
 
-arm_logs = deque(maxlen=3)
+arm_logs = deque(maxlen=5)
 
 robot_states = {robot: False for robot in ROBOT_NAMES}
 

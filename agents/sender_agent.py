@@ -1,7 +1,6 @@
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 import asyncio
-import os
 import threading
 import utils.connection_status as conn_status
 
@@ -15,14 +14,17 @@ class SenderAgent(Agent):
 
         async def run(self):
             from spade.message import Message
-            to = f"{self.robot_id}@prosody"
+            from config import XMPP_SERVER
+            to = f"{self.robot_id}@{XMPP_SERVER}"
             msg = Message(
                 to=to,
                 body=self.message
             )
             print(f"Sending message to {to}: {self.message}", flush=True)
+
             msg.set_metadata("robot_id", self.robot_id)
             msg.set_metadata("type", self.msg_type)
+            
             await self.send(msg)
 
     async def on_connection_failed(self, reason):
@@ -33,12 +35,12 @@ class SenderAgent(Agent):
         conn_status.set_xmpp_connected(False)
         print("⚠️ SenderAgent got disconnected.", flush=True)
 
-def send_message_to_robot(robot_id, message, sender_id="testClient", msg_type="log"):
+def send_message_to_robot(robot_id, message, msg_type="log"):
     def _send():
         async def task():
-            password = os.getenv("XMPP_PASSWORD", "plsnohack")
+            from config import XMPP_USERNAME, XMPP_SERVER, XMPP_PASSWORD
             try:
-                sender = SenderAgent(f"{sender_id}@prosody", password)
+                sender = SenderAgent(f"{XMPP_USERNAME}@{XMPP_SERVER}", XMPP_PASSWORD)
                 await sender.start(auto_register=True)
                 conn_status.set_xmpp_connected(True)
                 sender.add_behaviour(sender.SendBehaviour(robot_id, message, msg_type))

@@ -32,7 +32,6 @@ def register_callbacks(app):
 
         now = datetime.now()
         if race_state["running"] and race_state["start_time"]:
-            # race_state["elapsed"] = (now - race_state["start_time"]).total_seconds()
             base_elapsed = (now - race_state["start_time"]).total_seconds()
             penalty_time = sum(race_state.get("penalties", {}).values()) * PENALTY_TIME_SECONDS
             race_state["elapsed"] = base_elapsed + penalty_time
@@ -116,7 +115,7 @@ def register_callbacks(app):
             print("Start button clicked", flush=True)
             for robot_id in ROBOT_NAMES:
                 robot_states[robot_id] = True
-                send_message_to_robot(robot_id, "start", "dashboardClient")
+                send_message_to_robot(robot_id, "start")
             return 0, True
         elif triggered == "robots-start-cooldown":
             return dash.no_update, False
@@ -135,9 +134,6 @@ def register_callbacks(app):
         def handle_penalty(penalty_clicks, validate_clicks, cooldown_interval, _robot_id=robot_id):
             triggered = ctx.triggered_id
             if triggered == f"{_robot_id}-penalty":
-                # send_message_to_robot(_robot_id, "penalty", "dashboardClient")
-                # print(f"Penalty sent to {_robot_id}", flush=True)
-
                 if not race_state["running"]:
                     log_msg = "⛔ Cannot apply penalty: Race not running."
                     add_log(_robot_id, log_msg)
@@ -152,7 +148,7 @@ def register_callbacks(app):
                 race_state["penalty_cooldown"][_robot_id] = False
                 return "", dash.no_update   
             elif triggered == f"{_robot_id}-calibrate":
-                send_message_to_robot(_robot_id, "calibrate", "dashboardClient")
+                send_message_to_robot(_robot_id, "calibrate")
                 print(f"Calibration sent to {_robot_id}", flush=True)
                 return "Calibration sent!", dash.no_update
 
@@ -171,16 +167,14 @@ def register_callbacks(app):
         if triggered == "capture-top-image-btn":
             print("Capture request sent to top camera", flush=True)
             for robot_id in ROBOT_NAMES:
-                send_message_to_robot(robot_id, "take_picture", "dashboardClient")
-            # send_message_to_robot(TOP_CAMERA_NAME, "take_picture", "dashboardClient")
+                send_message_to_robot(robot_id, "take_picture")
             return "📸 Capture request sent!", 0
         elif triggered == "capture-status-clear-interval":
             return "", dash.no_update
         elif triggered == "validate-top-image-btn":
             print("Validation request sent to top camera", flush=True)
             for robot_id in ROBOT_NAMES:
-                send_message_to_robot(robot_id, "validate", "dashboardClient")
-            # send_message_to_robot(TOP_CAMERA_NAME, "validate", "dashboardClient")
+                send_message_to_robot(robot_id, "validate")
             return "✅ Validation request sent!", 0
         return dash.no_update, dash.no_update
     
@@ -287,7 +281,7 @@ def register_callbacks(app):
         if triggered == "send-xmpp-command-btn":
             try:
                 target_id = "armClient"
-                send_message_to_robot(target_id, body, sender_id="dashboardClient", msg_type=cmd_type)
+                send_message_to_robot(target_id, body, msg_type=cmd_type)
                 save_command_body_for_type(cmd_type, body)
                 return f"✅ Command '{cmd_type}' sent to {target_id}.", 0
             except Exception as e:
