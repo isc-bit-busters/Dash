@@ -297,11 +297,27 @@ def register_callbacks(app):
     
     @callback(
         Output("xmpp-command-body-container", "style"),
+        Output("xmpp-command-body", "placeholder"),
         Input("xmpp-command-type", "value"),
     )
-    def toggle_command_body_visibility(cmd_type):
-        hide_for = {None, "activate_gripper", "open_gripper", "close_gripper"}
+    def update_body_visibility_and_placeholder(cmd_type):
+        hide_for = {"activate_gripper", "open_gripper", "close_gripper", None}
 
-        if cmd_type in hide_for:
-            return {"display": "none"}
-        return {"display": "block"}
+        # Default to hiding
+        style = {"display": "none"} if cmd_type in hide_for else {"display": "block"}
+
+        # Custom placeholders
+        placeholders = {
+            "set_host_ip": "10.30.5.159",
+            "point": "[0.3, 0.2, 0.26, 0, 0, -1]",
+            "trajectory": "[[0.3, 0.2, 0.26, 0, 0, -1], [0.4, 0.25, 0.3, 0, 0, -1]]",
+            "set_speed": "10",
+            "set_acceleration": "10",
+            "activate_gripper": "",
+            "open_gripper": "",
+            "close_gripper": ""
+        }
+
+        placeholder = placeholders.get(cmd_type, "Select a command...")
+
+        return style, placeholder
