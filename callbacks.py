@@ -69,7 +69,7 @@ def register_callbacks(app):
 
         mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
-        arm_logs_html = [[html.Li(log) for log in list(arm_logs)]]
+        arm_logs_html = [html.Li(log) for log in list(arm_logs)]
 
         return *robot_logs_html, *robot_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display, arm_logs_html
 
