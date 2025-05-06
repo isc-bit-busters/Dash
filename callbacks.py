@@ -4,6 +4,7 @@ from utils.race_utils import race_state
 from agents.sender_agent import send_message_to_robot
 from mqtt.mqtt_client import send_mqtt_command
 from utils.mac_utils import save_mac_addresses
+from utils.xmpp_utils import save_command_body_for_type, load_command_body_for_type
 from utils.connection_status import get_all_gate_statuses
 
 from config import ROBOT_NAMES, TOP_CAMERA_NAME, PENALTY_TIME_SECONDS
@@ -286,6 +287,7 @@ def register_callbacks(app):
             try:
                 target_id = "armClient"
                 send_message_to_robot(target_id, body, sender_id="dashboardClient", msg_type=cmd_type)
+                save_command_body_for_type(cmd_type, body)
                 return f"✅ Command '{cmd_type}' sent to {target_id}.", 0
             except Exception as e:
                 return f"❌ Failed to send command: {str(e)}", 0
@@ -321,3 +323,12 @@ def register_callbacks(app):
         placeholder = placeholders.get(cmd_type, "Select a command...")
 
         return style, placeholder
+    
+    @callback(
+        Output("xmpp-command-body", "value"),
+        Input("xmpp-command-type", "value")
+    )
+    def load_stored_body_for_type(cmd_type):
+        if cmd_type:
+            return load_command_body_for_type(cmd_type)
+        return ""

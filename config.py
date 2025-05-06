@@ -10,6 +10,7 @@ MQTT_TOPICS = [
 ]
 
 MAC_FILE = "mac_addresses.json"
+XMPP_MEMORY_FILE = "xmpp_command_memory.json"
 
 ROBOT_NAMES = ["gerald", "mael"]
 TOP_CAMERA_NAME = "top_camera"
