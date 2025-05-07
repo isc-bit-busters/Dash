@@ -172,6 +172,14 @@ def top_camera_layout():
         ]),
     ]
 
+def camera_log_card():
+    return dbc.Card([
+        dbc.CardHeader("Top Camera Logs"),
+        dbc.CardBody([
+            html.Ul(id="camera-log-display", className="log-list", style={"maxHeight": "300px", "overflowY": "scroll"})
+        ])
+    ])
+
 def start_stop_buttons():
     return dbc.Row([
         dbc.Col(
@@ -194,6 +202,7 @@ layout = dbc.Container([
     connection_status_card,
 
     *top_camera_layout(),
+    camera_log_card(),
 
     dbc.Row([
     dbc.Col(robot_card(robot_id), md=6) for robot_id in ROBOT_NAMES

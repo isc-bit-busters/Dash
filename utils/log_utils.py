@@ -5,6 +5,8 @@ from config import ROBOT_NAMES, TOP_CAMERA_NAME
 
 robot_logs = {robot: deque(maxlen=10) for robot in ROBOT_NAMES}
 
+camera_logs = deque(maxlen=10)
+
 mqtt_logs = deque(maxlen=20)
 
 arm_logs = deque(maxlen=5)
@@ -19,6 +21,8 @@ latest_frames[TOP_CAMERA_NAME] = None
 def add_log(robot_id, message):
     if robot_id in robot_logs:
         robot_logs[robot_id].appendleft(message)
+    elif robot_id == TOP_CAMERA_NAME:
+        camera_logs.appendleft(message)
 
 def add_mqtt_log(msg):
     mqtt_logs.appendleft(msg)

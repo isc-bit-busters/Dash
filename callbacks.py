@@ -19,6 +19,7 @@ def register_callbacks(app):
         *[Output(f"{robot_id}-penalty-count", "children") for robot_id in ROBOT_NAMES],
         *[Output(f"{robot_id}-penalty", "disabled") for robot_id in ROBOT_NAMES],
         Output(f"{TOP_CAMERA_NAME}-image", "src"),
+        Output("camera-log-display", "children"),
         Output('mqtt-log-display', 'children'),
         Output("live-timer", "children"),
         Output("delta-timer", "children"),
@@ -27,7 +28,7 @@ def register_callbacks(app):
         State('live-timer', 'children'),
     )
     def update_ui(n, current_timer):
-        from utils.log_utils import robot_logs, mqtt_logs, latest_frames, arm_logs, latest_path_frames
+        from utils.log_utils import robot_logs, mqtt_logs, latest_frames, arm_logs, latest_path_frames, camera_logs
         from datetime import datetime
 
         now = datetime.now()
@@ -72,11 +73,13 @@ def register_callbacks(app):
 
         top_camera_img = f"data:image/jpeg;base64,{latest_frames[TOP_CAMERA_NAME]}" if latest_frames[TOP_CAMERA_NAME] else ""
 
+        camera_logs_html = [html.Li(log) for log in list(camera_logs)]
+
         mqtt_display_logs = [html.Li(log) for log in list(mqtt_logs)]
 
         arm_logs_html = [html.Li(log) for log in list(arm_logs)]
 
-        return *robot_logs_html, *robot_images_src, *robot_path_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, mqtt_display_logs, timer_display, delta_display, arm_logs_html
+        return *robot_logs_html, *robot_images_src, *robot_path_images_src, *robot_penalty_counts, *robot_penalty_buttons, top_camera_img, camera_logs_html, mqtt_display_logs, timer_display, delta_display, arm_logs_html
 
     @app.callback(
         Output("reset-status", "children"),

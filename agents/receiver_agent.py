@@ -43,7 +43,7 @@ class ReceiverAgent(Agent):
         def handle_log(self, robot_id, sender, body):
             log_entry = f"From {sender}: {body}"
             print(f"Log added : {log_entry}", flush=True)
-            add_log(robot_id, log_entry)
+            add_log(robot_id, body)
 
         def handle_cube_detection(self, robot_id, body):
             print(f"Received cube detection data from {robot_id} {body}", flush=True)
