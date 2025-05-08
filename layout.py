@@ -93,7 +93,8 @@ def robotic_arm_card():
                                 "set_host_ip",
                                 "point", "trajectory", 
                                 "activate_gripper", "open_gripper", "close_gripper", 
-                                "set_speed", "set_acceleration"
+                                "set_speed", "set_acceleration",
+                                "remove_wall"
                             ]
                         ],
                         placeholder="Select a command"

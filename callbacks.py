@@ -301,7 +301,7 @@ def register_callbacks(app):
         Input("xmpp-command-type", "value"),
     )
     def update_body_visibility_and_placeholder(cmd_type):
-        hide_for = {"activate_gripper", "open_gripper", "close_gripper", None}
+        hide_for = {"activate_gripper", "open_gripper", "close_gripper", "remove_wall", None}
 
         # Default to hiding
         style = {"display": "none"} if cmd_type in hide_for else {"display": "block"}
@@ -315,7 +315,8 @@ def register_callbacks(app):
             "set_acceleration": "10",
             "activate_gripper": "",
             "open_gripper": "",
-            "close_gripper": ""
+            "close_gripper": "",
+            "remove_wall": ""
         }
 
         placeholder = placeholders.get(cmd_type, "Select a command...")
